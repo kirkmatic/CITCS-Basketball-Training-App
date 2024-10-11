@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:citcs_training_app/screens/signup_screen.dart'; // Replace with your actual project name
+
 
 class LoginPageWidget extends StatefulWidget {
   const LoginPageWidget({super.key});
@@ -162,6 +164,7 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
                         TextButton(
                           onPressed: () {
                             // Handle navigation to sign-up screen
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => SignupPageWidget()));
                           },
                           child: Text(
                             "Sign up",
