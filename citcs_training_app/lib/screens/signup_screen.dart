@@ -16,7 +16,13 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
   final studentNumberController = TextEditingController();
   final nameController = TextEditingController();
   final ageController = TextEditingController();
-  final roleController = TextEditingController();
+
+  // Role selection variable
+  String selectedRole = '';
+  
+  // State variables for password visibility
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +60,6 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                         color: Colors.white,
                       ),
                     ),
-
                     SizedBox(height: 10),
 
                     // Student Number
@@ -72,7 +77,6 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                         ),
                       ),
                     ),
-
                     SizedBox(height: 10),
 
                     // Name
@@ -90,43 +94,106 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                         ),
                       ),
                     ),
-
                     SizedBox(height: 10),
 
-                    // Age
-                    TextFormField(
-                      controller: ageController,
-                      decoration: InputDecoration(
-                        labelText: 'Age',
-                        labelStyle: GoogleFonts.montserrat(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
+                    // Age and Role (Coach or Player) inline
+                    Row(
+                      children: [
+                        // Age
+                        Expanded(
+                          child: TextFormField(
+                            controller: ageController,
+                            decoration: InputDecoration(
+                              labelText: 'Age',
+                              labelStyle: GoogleFonts.montserrat(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                        SizedBox(width: 20), // Add some space between Age and Role
+
+                        // Role selection with ChoiceChips
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Role',
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(height: 8), // Space between label and chips
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ChoiceChip(
+                                      label: Text(
+                                        'Coach',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: selectedRole == 'Coach'
+                                              ? Colors.white
+                                              : Colors.black,
+                                        ),
+                                      ),
+                                      selected: selectedRole == 'Coach',
+                                      onSelected: (isSelected) {
+                                        setState(() {
+                                          selectedRole = isSelected ? 'Coach' : '';
+                                        });
+                                      },
+                                      selectedColor: Color.fromRGBO(22, 22, 22, 100),
+                                      backgroundColor: Colors.grey[200],
+                                    ),
+                                  ),
+                                  SizedBox(width: 10), // Space between chips
+                                  Expanded(
+                                    child: ChoiceChip(
+                                      label: Text(
+                                        'Player',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: selectedRole == 'Player'
+                                              ? Colors.white
+                                              : Colors.black,
+                                        ),
+                                      ),
+                                      selected: selectedRole == 'Player',
+                                      onSelected: (isSelected) {
+                                        setState(() {
+                                          selectedRole = isSelected ? 'Player' : '';
+                                        });
+                                      },
+                                      selectedColor: Color.fromRGBO(22, 22, 22, 100),
+                                      backgroundColor: Colors.grey[200],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (selectedRole.isEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text(
+                                    'Please select a role',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-
-                    SizedBox(height: 10),
-
-                    // Role (Coach or Player)
-                    TextFormField(
-                      controller: roleController,
-                      decoration: InputDecoration(
-                        labelText: 'Role (Coach or Player)',
-                        labelStyle: GoogleFonts.montserrat(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-
                     SizedBox(height: 10),
 
                     // Email
@@ -144,13 +211,12 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                         ),
                       ),
                     ),
-
                     SizedBox(height: 10),
 
                     // Password
                     TextFormField(
                       controller: passwordController,
-                      obscureText: true,
+                      obscureText: !_isPasswordVisible, // Toggle visibility
                       decoration: InputDecoration(
                         labelText: 'Password',
                         labelStyle: GoogleFonts.montserrat(
@@ -161,15 +227,25 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                            color: Colors.white,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isPasswordVisible = !_isPasswordVisible; // Toggle password visibility
+                            });
+                          },
+                        ),
                       ),
                     ),
-
                     SizedBox(height: 10),
 
                     // Confirm Password
                     TextFormField(
                       controller: confirmPasswordController,
-                      obscureText: true,
+                      obscureText: !_isConfirmPasswordVisible, // Toggle visibility
                       decoration: InputDecoration(
                         labelText: 'Confirm Password',
                         labelStyle: GoogleFonts.montserrat(
@@ -180,15 +256,32 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                            color: Colors.white,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isConfirmPasswordVisible = !_isConfirmPasswordVisible; // Toggle confirm password visibility
+                            });
+                          },
+                        ),
                       ),
                     ),
-
                     SizedBox(height: 10),
 
                     // Signup button
                     ElevatedButton(
                       onPressed: () {
                         // Add your signup logic here
+                        if (selectedRole.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Please select a role')),
+                          );
+                          return;
+                        }
+                        // Further signup logic here
                       },
                       style: ElevatedButton.styleFrom(
                         padding: EdgeInsets.symmetric(horizontal: 120, vertical: 15),
@@ -206,7 +299,6 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                         ),
                       ),
                     ),
-
                     SizedBox(height: 5),
 
                     // Already have an account?
@@ -216,7 +308,7 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                         Text(
                           "Already have an account?",
                           style: GoogleFonts.montserrat(
-                            fontSize: 12,
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
                             color: Colors.white,
                           ),
@@ -233,8 +325,8 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                           child: Text(
                             "Login",
                             style: GoogleFonts.montserrat(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
                               color: Colors.white,
                               decoration: TextDecoration.underline,
                             ),

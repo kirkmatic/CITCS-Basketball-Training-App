@@ -1,8 +1,8 @@
+import 'package:citcs_training_app/screens/players_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:citcs_training_app/screens/signup_screen.dart'; // Replace with your actual project name
-
 
 class LoginPageWidget extends StatefulWidget {
   const LoginPageWidget({super.key});
@@ -14,6 +14,7 @@ class LoginPageWidget extends StatefulWidget {
 class _LoginPageWidgetState extends State<LoginPageWidget> {
   late TextEditingController emailController;
   late TextEditingController passwordController;
+  bool _isPasswordVisible = false; // State variable for password visibility
 
   @override
   void initState() {
@@ -109,7 +110,7 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
                     // Password text field
                     TextField(
                       controller: passwordController,
-                      obscureText: true,
+                      obscureText: !_isPasswordVisible, // Toggle visibility
                       decoration: InputDecoration(
                         labelText: 'Password',
                         labelStyle: GoogleFonts.montserrat(
@@ -120,6 +121,17 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                            color: Colors.white,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isPasswordVisible = !_isPasswordVisible; // Toggle password visibility
+                            });
+                          },
+                        ),
                       ),
                     ),
 
@@ -129,6 +141,7 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
                     ElevatedButton(
                       onPressed: () {
                         // Add your login logic here
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => PlayersPageWidget()));
                       },
                       style: ElevatedButton.styleFrom(
                         padding: EdgeInsets.symmetric(horizontal: 130, vertical: 15),
@@ -155,7 +168,7 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
                         Text(
                           "Don't have an account?",
                           style: GoogleFonts.montserrat(
-                            fontSize: 12,
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
                             color: Colors.white,
                           ),
@@ -169,8 +182,8 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
                           child: Text(
                             "Sign up",
                             style: GoogleFonts.montserrat(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
                               color: Colors.white,
                               decoration: TextDecoration.underline, // Underline the text
                             ),
