@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1067520972977",
+    "project_id": "citcs-training-app",
+    "storage_bucket": "citcs-training-app.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1067520972977:android:302a1fca199cbcf9bb2a90",
+        "android_client_info": {
+          "package_name": "com.example.citcs_training_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpGSHTIqvKUzmXHPqrYK3qSEWHA8u7eOk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

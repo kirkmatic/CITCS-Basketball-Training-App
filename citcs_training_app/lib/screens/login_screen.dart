@@ -73,7 +73,7 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
                       'Hello Athlete!',
                       style: GoogleFonts.montserrat(
                         fontSize: 18,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w700,
                         color: Colors.white, // Text color below logo
                       ),
                     ),
