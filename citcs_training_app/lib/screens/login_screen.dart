@@ -106,17 +106,43 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
                     // Logo and welcome text
                     Image.asset('assets/images/logo.png', width: 140, height: 130),
                     const SizedBox(height: 1),
-                    Text('Hello Athlete!', style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
-                    Text('Welcome to CITCS Trainer Application', style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white)),
+                    Text(
+                      'Hello Athlete!',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      'Welcome to CITCS Trainer Application',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                      ),
+                    ),
                     const SizedBox(height: 10),
 
                     // Email text field
                     TextField(
                       controller: emailController,
+                      style: const TextStyle(color: Colors.white), // Set text color to white while typing
                       decoration: InputDecoration(
                         labelText: 'Email',
-                        labelStyle: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        labelStyle: GoogleFonts.montserrat(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.white, width: 1.5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.white, width: 1.5),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -125,12 +151,27 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
                     TextField(
                       controller: passwordController,
                       obscureText: !_isPasswordVisible,
+                      style: const TextStyle(color: Colors.white), // Set text color to white while typing
                       decoration: InputDecoration(
                         labelText: 'Password',
-                        labelStyle: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        labelStyle: GoogleFonts.montserrat(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.white, width: 1.5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.white, width: 1.5),
+                        ),
                         suffixIcon: IconButton(
-                          icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.white),
+                          icon: Icon(
+                            _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                            color: Colors.white,
+                          ),
                           onPressed: () {
                             setState(() {
                               _isPasswordVisible = !_isPasswordVisible;
@@ -146,11 +187,19 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
                       onPressed: _handleLogin, // Call the login handler
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 130, vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         backgroundColor: const Color.fromRGBO(22, 22, 22, 100),
                         foregroundColor: Colors.white,
                       ),
-                      child: Text('Login', style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        'Login',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 5),
 
@@ -158,12 +207,32 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text("Don't have an account?", style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white)),
+                        Text(
+                          "Don't have an account?",
+                          style: GoogleFonts.montserrat(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
+                        ),
                         TextButton(
                           onPressed: () {
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => const SignupPageWidget()));
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SignupPageWidget(),
+                              ),
+                            );
                           },
-                          child: Text("Sign up", style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white, decoration: TextDecoration.underline)),
+                          child: Text(
+                            "Sign up",
+                            style: GoogleFonts.montserrat(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
                         ),
                       ],
                     ),

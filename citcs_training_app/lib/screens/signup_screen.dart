@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Import for input formatters
 import 'package:google_fonts/google_fonts.dart';
 import 'package:citcs_training_app/screens/login_screen.dart'; // Import for LoginPageWidget
 import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
@@ -64,8 +65,8 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                     ),
                     const SizedBox(height: 10),
 
-                    // Student Number
-                    _buildTextField(studentNumberController, 'Student Number'),
+                    // Student Number (accepts only numerical values)
+                    _buildNumericTextField(studentNumberController, 'Student Number'),
 
                     const SizedBox(height: 10),
 
@@ -139,15 +140,59 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
   Widget _buildTextField(TextEditingController controller, String label) {
     return TextFormField(
       controller: controller,
+      style: const TextStyle(color: Colors.white), // Make input text white
       decoration: InputDecoration(
         labelText: label,
         labelStyle: GoogleFonts.montserrat(
           fontSize: 14,
           fontWeight: FontWeight.w500,
-          color: Colors.white,
+          color: Colors.white, // Label text color
         ),
-        border: OutlineInputBorder(
+        enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Colors.white, // Border color when enabled
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Colors.white, // Border color when focused
+            width: 1.5,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Method to build a numeric text field (for Age and Student Number)
+  Widget _buildNumericTextField(TextEditingController controller, String label) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: TextInputType.number, // Numerical keyboard
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly], // Accept only digits
+      style: const TextStyle(color: Colors.white), // Make input text white
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.montserrat(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: Colors.white, // Label text color
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Colors.white, // Border color when enabled
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Colors.white, // Border color when focused
+            width: 1.5,
+          ),
         ),
       ),
     );
@@ -157,9 +202,9 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
   Widget _buildAgeAndRoleSelection() {
     return Row(
       children: [
-        // Age
+        // Age (accepts only numerical values)
         Expanded(
-          child: _buildTextField(ageController, 'Age'),
+          child: _buildNumericTextField(ageController, 'Age'),
         ),
         const SizedBox(width: 20), // Space between Age and Role
 
@@ -242,15 +287,27 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
     return TextFormField(
       controller: controller,
       obscureText: !isVisible, // Toggle visibility
+      style: const TextStyle(color: Colors.white), // Make input text white
       decoration: InputDecoration(
         labelText: label,
         labelStyle: GoogleFonts.montserrat(
           fontSize: 14,
           fontWeight: FontWeight.w500,
-          color: Colors.white,
+          color: Colors.white, // Label text color
         ),
-        border: OutlineInputBorder(
+        enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Colors.white, // Border color when enabled
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Colors.white, // Border color when focused
+            width: 1.5,
+          ),
         ),
         suffixIcon: IconButton(
           icon: Icon(
@@ -265,30 +322,30 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
     );
   }
 
-void _onSignupPressed() async {
-  try {
-    // Attempt to create a user
-    UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-      email: emailController.text.trim(),
-      password: passwordController.text.trim(),
-    );
+  // Signup method
+  void _onSignupPressed() async {
+    try {
+      // Attempt to create a user
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
 
-    // Write user details to Firestore
-    await FirebaseFirestore.instance.collection('users').doc(userCredential.user?.uid).set({
-      'studentNumber': studentNumberController.text.trim(),
-      'name': nameController.text.trim(),
-      'age': ageController.text.trim(),
-      'role': selectedRole,
-    });
-    Navigator.push(context,
-              MaterialPageRoute(builder: (context) => const LoginPageWidget()),
-            );
-    debugPrint("User data added successfully!");
-  } catch (e) {
-    debugPrint("Error: $e");
+      // Write user details to Firestore
+      await FirebaseFirestore.instance.collection('users').doc(userCredential.user?.uid).set({
+        'studentNumber': studentNumberController.text.trim(),
+        'name': nameController.text.trim(),
+        'age': ageController.text.trim(),
+        'role': selectedRole,
+      });
+      Navigator.push(context,
+                MaterialPageRoute(builder: (context) => const LoginPageWidget()),
+              );
+      debugPrint("User data added successfully!");
+    } catch (e) {
+      debugPrint("Error: $e");
+    }
   }
-}
-
 
   // Method to build the login link
   Widget _buildLoginLink() {

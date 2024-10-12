@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'login_screen.dart'; // Ensure you have this import to access LoginPageWidget
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CoachesPageWidget extends StatefulWidget {
   const CoachesPageWidget({super.key});
@@ -11,10 +13,57 @@ class CoachesPageWidget extends StatefulWidget {
 
 class _CoachesPageWidgetState extends State<CoachesPageWidget> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  String coachName = "Loading..."; // Default name before fetching actual name
+  List<Map<String, dynamic>> players = []; // List to hold player data
+  final TextEditingController textController = TextEditingController();
 
   static const Color primaryColor = Color(0xFF450100);
   static const Color backgroundColor = Color(0xFFE5E5E5);
   static const Color whiteColor = Colors.white;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCoachData();
+    _fetchPlayersData();
+  }
+
+  Future<void> _fetchCoachData() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        DocumentSnapshot coachDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (coachDoc.exists && coachDoc['name'] != null) {
+          setState(() {
+            coachName = coachDoc['name']; // Fetch and set the coach's name
+          });
+        } else {
+          print('No coach data found');
+        }
+      } else {
+        print('User not logged in');
+      }
+    } catch (e) {
+      print('Error fetching coach name: $e');
+    }
+  }
+
+  Future<void> _fetchPlayersData() async {
+    try {
+      QuerySnapshot playerDocs = await FirebaseFirestore.instance.collection('users')
+          .where('role', isEqualTo: 'player') // Fetch players with role 'player'
+          .get();
+      setState(() {
+        players = playerDocs.docs.map((doc) => {
+          'name': doc['name'],
+          'student_number': doc['student_number'],
+          'id': doc.id, // Store player ID for actions
+        }).toList();
+      });
+    } catch (e) {
+      print('Error fetching players: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +79,8 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
               mainAxisSize: MainAxisSize.min, // Prevent overflow
               children: [
                 _buildHeader(),
-                _buildStatusSection(),
                 _buildPlayersSection(),
+                _buildPlayersTable(),
               ],
             ),
           ),
@@ -54,7 +103,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Coach\'s Name',
+                coachName,
                 style: GoogleFonts.montserrat(
                   fontWeight: FontWeight.bold,
                   color: whiteColor,
@@ -78,42 +127,6 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusSection() {
-    return Container(
-      width: double.infinity,
-      color: backgroundColor,
-      child: Padding(
-        padding: const EdgeInsetsDirectional.fromSTEB(8.5, 0, 8.5, 0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min, // Prevent overflow
-          children: [
-            Align(
-              alignment: const AlignmentDirectional(-1, 0),
-              child: Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(10, 10, 0, 10),
-                child: Text(
-                  'My Status',
-                  style: GoogleFonts.montserrat(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Smaller gaps
-              children: [
-                _buildStatusContainer('100%', 'Dribbling'),
-                _buildStatusContainer('100%', 'Passing'),
-              ],
-            ),
-          ],
         ),
       ),
     );
@@ -152,8 +165,6 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
   }
 
   Widget _buildSearchField() {
-    final TextEditingController textController = TextEditingController();
-
     return Row(
       mainAxisSize: MainAxisSize.max,
       children: [
@@ -176,13 +187,14 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
             ),
           ),
         ),
-        SizedBox(width: 10),
+        const SizedBox(width: 10),
         ElevatedButton(
           onPressed: () {
-            print('Button pressed ...');
+            // Implement your search functionality here
           },
           child: Text('Search'),
           style: ElevatedButton.styleFrom(
+            backgroundColor: primaryColor, // Set button color to primary color
             textStyle: GoogleFonts.montserrat(
               fontWeight: FontWeight.bold,
               color: whiteColor,
@@ -194,41 +206,40 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
     );
   }
 
-  Widget _buildStatusContainer(String percentage, String label) {
-    return Container(
-      width: 120, // Minimized width
-      height: 102,
-      decoration: BoxDecoration(
-        color: primaryColor,
-        borderRadius: BorderRadius.circular(5),
-      ),
-      child: Align(
-        alignment: const AlignmentDirectional(0, 0),
-        child: Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(0, 16.5, 0, 16.5),
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildPlayersTable() {
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: Table(
+        border: TableBorder.all(),
+        children: [
+          TableRow(
+            decoration: BoxDecoration(color: primaryColor),
             children: [
-              Text(
-                percentage,
-                style: GoogleFonts.montserrat(
-                  color: whiteColor,
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                label,
-                style: GoogleFonts.montserrat(
-                  color: whiteColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              TableCell(child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text('Player Name', style: GoogleFonts.montserrat(color: whiteColor, fontWeight: FontWeight.bold)),
+              )),
+              TableCell(child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text('Student Number', style: GoogleFonts.montserrat(color: whiteColor, fontWeight: FontWeight.bold)),
+              )),
             ],
           ),
-        ),
+          ...players.map((player) {
+            return TableRow(
+              children: [
+                TableCell(child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(player['name'], style: GoogleFonts.montserrat()),
+                )),
+                TableCell(child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(player['student_number'], style: GoogleFonts.montserrat()),
+                )),
+              ],
+            );
+          }).toList(),
+        ],
       ),
     );
   }
