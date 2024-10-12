@@ -1,8 +1,10 @@
-import 'package:citcs_training_app/screens/players_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import 'package:citcs_training_app/screens/signup_screen.dart'; // Replace with your actual project name
+import 'package:citcs_training_app/screens/signup_screen.dart'; // Correct import for SignupPageWidget
+import 'package:citcs_training_app/screens/players_screen.dart';
+import 'package:citcs_training_app/screens/coach_screen.dart'; // Import for CoachScreen
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginPageWidget extends StatefulWidget {
   const LoginPageWidget({super.key});
@@ -30,6 +32,50 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
     super.dispose();
   }
 
+  // Method to handle login
+  Future<void> _handleLogin() async {
+    try {
+      // Sign in with email and password
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      // Get user role from Firestore
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userCredential.user?.uid).get();
+
+      if (userDoc.exists) {
+        String userRole = userDoc['role'];
+
+        // Navigate to the appropriate screen based on the user role
+        if (userRole == 'Player') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const PlayersPageWidget()),
+          );
+        } else if (userRole == 'Coach') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const CoachesPageWidget()), // Ensure CoachScreen is imported
+          );
+        } else {
+          // Handle unknown roles if necessary
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Unknown role. Please contact support.')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not found. Please sign up.')),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Login failed')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -37,21 +83,19 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
         children: [
           // Background image
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/images/bg_image.png'), // Path to your background image
+                image: AssetImage('assets/images/bg_image.png'),
                 fit: BoxFit.cover,
               ),
             ),
           ),
-
-          // Container behind the logo, texts, email, and password fields
           Center(
             child: Container(
               width: 352,
-              height: 540, // Adjusted height
+              height: 540,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2), // Transparent white background
+                color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Padding(
@@ -59,135 +103,67 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Logo
-                    Image.asset(
-                      'assets/images/logo.png',
-                      width: 140,
-                      height: 130,
-                    ),
-
-                    SizedBox(height: 1),
-
-                    // Text below the logo
-                    Text(
-                      'Hello Athlete!',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white, // Text color below logo
-                      ),
-                    ),
-
-                    Text(
-                      'Welcome to CITCS Trainer Application',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white, // Text color below logo
-                      ),
-                    ),
-
-                    SizedBox(height: 10),
+                    // Logo and welcome text
+                    Image.asset('assets/images/logo.png', width: 140, height: 130),
+                    const SizedBox(height: 1),
+                    Text('Hello Athlete!', style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
+                    Text('Welcome to CITCS Trainer Application', style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white)),
+                    const SizedBox(height: 10),
 
                     // Email text field
                     TextField(
                       controller: emailController,
                       decoration: InputDecoration(
                         labelText: 'Email',
-                        labelStyle: GoogleFonts.montserrat(
-                          fontSize: 14, // Reduced font size
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white, // Label color
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        labelStyle: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
-
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
                     // Password text field
                     TextField(
                       controller: passwordController,
-                      obscureText: !_isPasswordVisible, // Toggle visibility
+                      obscureText: !_isPasswordVisible,
                       decoration: InputDecoration(
                         labelText: 'Password',
-                        labelStyle: GoogleFonts.montserrat(
-                          fontSize: 14, // Reduced font size
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white, // Label color
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        labelStyle: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         suffixIcon: IconButton(
-                          icon: Icon(
-                            _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                            color: Colors.white,
-                          ),
+                          icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.white),
                           onPressed: () {
                             setState(() {
-                              _isPasswordVisible = !_isPasswordVisible; // Toggle password visibility
+                              _isPasswordVisible = !_isPasswordVisible;
                             });
                           },
                         ),
                       ),
                     ),
-
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
                     // Login button
                     ElevatedButton(
-                      onPressed: () {
-                        // Add your login logic here
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => PlayersPageWidget()));
-                      },
+                      onPressed: _handleLogin, // Call the login handler
                       style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(horizontal: 130, vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        backgroundColor: Color.fromRGBO(22, 22, 22, 100),
+                        padding: const EdgeInsets.symmetric(horizontal: 130, vertical: 15),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        backgroundColor: const Color.fromRGBO(22, 22, 22, 100),
                         foregroundColor: Colors.white,
                       ),
-                      child: Text(
-                        'Login',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: Text('Login', style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.bold)),
                     ),
+                    const SizedBox(height: 5),
 
-                    SizedBox(height: 5), // Add spacing between the button and the text
-
+                    // Navigate to Signup
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.center, // Center the text horizontally
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          "Don't have an account?",
-                          style: GoogleFonts.montserrat(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(width: 2), // Add spacing between the texts
+                        Text("Don't have an account?", style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white)),
                         TextButton(
                           onPressed: () {
-                            // Handle navigation to sign-up screen
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => SignupPageWidget()));
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => const SignupPageWidget()));
                           },
-                          child: Text(
-                            "Sign up",
-                            style: GoogleFonts.montserrat(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              decoration: TextDecoration.underline, // Underline the text
-                            ),
-                          ),
+                          child: Text("Sign up", style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white, decoration: TextDecoration.underline)),
                         ),
                       ],
                     ),

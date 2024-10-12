@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:citcs_training_app/screens/login_screen.dart'; // Correct import for LoginPageWidget
+import 'package:citcs_training_app/screens/login_screen.dart'; // Import for LoginPageWidget
+import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 
 class SignupPageWidget extends StatefulWidget {
   const SignupPageWidget({super.key});
@@ -16,7 +18,7 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
   final studentNumberController = TextEditingController();
   final nameController = TextEditingController();
   final ageController = TextEditingController();
-
+  
   // Role selection variable
   String selectedRole = '';
   
@@ -31,7 +33,7 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
         children: [
           // Background image
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               image: DecorationImage(
                 image: AssetImage('assets/images/bg_image.png'), // Ensure this path is correct
                 fit: BoxFit.cover,
@@ -60,27 +62,27 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                         color: Colors.white,
                       ),
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
                     // Student Number
                     _buildTextField(studentNumberController, 'Student Number'),
 
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
                     // Name
                     _buildTextField(nameController, 'Name'),
 
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
                     // Age and Role (Coach or Player) inline
                     _buildAgeAndRoleSelection(),
 
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
                     // Email
                     _buildTextField(emailController, 'Email'),
 
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
                     // Password
                     _buildPasswordField(passwordController, 'Password', _isPasswordVisible, (value) {
@@ -89,7 +91,7 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                       });
                     }),
 
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
                     // Confirm Password
                     _buildPasswordField(confirmPasswordController, 'Confirm Password', _isConfirmPasswordVisible, (value) {
@@ -98,17 +100,17 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                       });
                     }),
 
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
                     // Signup button
                     ElevatedButton(
                       onPressed: _onSignupPressed,
                       style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(horizontal: 120, vertical: 15),
+                        padding: const EdgeInsets.symmetric(horizontal: 120, vertical: 15),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        backgroundColor: Color.fromRGBO(22, 22, 22, 100),
+                        backgroundColor: const Color.fromRGBO(22, 22, 22, 100),
                         foregroundColor: Colors.white,
                       ),
                       child: Text(
@@ -119,7 +121,7 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                         ),
                       ),
                     ),
-                    SizedBox(height: 5),
+                    const SizedBox(height: 5),
 
                     // Already have an account?
                     _buildLoginLink(),
@@ -159,7 +161,7 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
         Expanded(
           child: _buildTextField(ageController, 'Age'),
         ),
-        SizedBox(width: 20), // Space between Age and Role
+        const SizedBox(width: 20), // Space between Age and Role
 
         // Role selection with ChoiceChips
         Expanded(
@@ -174,7 +176,7 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                   color: Colors.white,
                 ),
               ),
-              SizedBox(height: 8), // Space between label and chips
+              const SizedBox(height: 8), // Space between label and chips
               Row(
                 children: [
                   Expanded(
@@ -193,11 +195,11 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                           selectedRole = isSelected ? 'Coach' : '';
                         });
                       },
-                      selectedColor: Color.fromRGBO(22, 22, 22, 100),
+                      selectedColor: const Color.fromRGBO(22, 22, 22, 100),
                       backgroundColor: Colors.grey[200],
                     ),
                   ),
-                  SizedBox(width: 10), // Space between chips
+                  const SizedBox(width: 10), // Space between chips
                   Expanded(
                     child: ChoiceChip(
                       label: Text(
@@ -214,15 +216,15 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
                           selectedRole = isSelected ? 'Player' : '';
                         });
                       },
-                      selectedColor: Color.fromRGBO(22, 22, 22, 100),
+                      selectedColor: const Color.fromRGBO(22, 22, 22, 100),
                       backgroundColor: Colors.grey[200],
                     ),
                   ),
                 ],
               ),
               if (selectedRole.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
+                const Padding(
+                  padding: EdgeInsets.only(top: 8.0),
                   child: Text(
                     'Please select a role',
                     style: TextStyle(color: Colors.white),
@@ -263,46 +265,52 @@ class _SignupPageWidgetState extends State<SignupPageWidget> {
     );
   }
 
-  // Method to handle signup button press
-  void _onSignupPressed() {
-    if (selectedRole.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please select a role')),
-      );
-      return;
-    }
-    // Further signup logic here
+void _onSignupPressed() async {
+  try {
+    // Attempt to create a user
+    UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      email: emailController.text.trim(),
+      password: passwordController.text.trim(),
+    );
+
+    // Write user details to Firestore
+    await FirebaseFirestore.instance.collection('users').doc(userCredential.user?.uid).set({
+      'studentNumber': studentNumberController.text.trim(),
+      'name': nameController.text.trim(),
+      'age': ageController.text.trim(),
+      'role': selectedRole,
+    });
+    Navigator.push(context,
+              MaterialPageRoute(builder: (context) => const LoginPageWidget()),
+            );
+    debugPrint("User data added successfully!");
+  } catch (e) {
+    debugPrint("Error: $e");
   }
+}
+
 
   // Method to build the login link
   Widget _buildLoginLink() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          "Already have an account?",
-          style: GoogleFonts.montserrat(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
-          ),
+        const Text(
+          'Already have an account? ',
+          style: TextStyle(color: Colors.white),
         ),
-        SizedBox(width: 2),
-        TextButton(
-          onPressed: () {
-            // Navigate to the login screen
+        GestureDetector(
+          onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => LoginPageWidget()),
+              MaterialPageRoute(builder: (context) => const LoginPageWidget()),
             );
           },
-          child: Text(
-            "Login",
-            style: GoogleFonts.montserrat(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
+          child: const Text(
+            'Login',
+            style: TextStyle(
               color: Colors.white,
-              decoration: TextDecoration.underline,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ),

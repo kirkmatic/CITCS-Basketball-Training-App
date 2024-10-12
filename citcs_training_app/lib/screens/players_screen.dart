@@ -46,9 +46,9 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
       height: 60,
       color: primaryColor,
       child: Align(
-        alignment: AlignmentDirectional(0, 0),
+        alignment: const AlignmentDirectional(0, 0),
         child: Padding(
-          padding: EdgeInsetsDirectional.fromSTEB(9, 0, 9, 0),
+          padding: const EdgeInsetsDirectional.fromSTEB(9, 0, 9, 0),
           child: Row(
             mainAxisSize: MainAxisSize.max,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -88,14 +88,14 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
       width: double.infinity,
       color: backgroundColor,
       child: Padding(
-        padding: EdgeInsetsDirectional.fromSTEB(8.5, 0, 8.5, 0),
+        padding: const EdgeInsetsDirectional.fromSTEB(8.5, 0, 8.5, 0),
         child: Column(
           mainAxisSize: MainAxisSize.min, // Prevent overflow
           children: [
             Align(
-              alignment: AlignmentDirectional(-1, 0),
+              alignment: const AlignmentDirectional(-1, 0),
               child: Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(10, 10, 0, 10),
+                padding: const EdgeInsetsDirectional.fromSTEB(10, 10, 0, 10),
                 child: Text(
                   'My Status',
                   style: GoogleFonts.montserrat(
@@ -125,16 +125,16 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
       width: double.infinity,
       color: backgroundColor,
       child: Align(
-        alignment: AlignmentDirectional(0, 0),
+        alignment: const AlignmentDirectional(0, 0),
         child: Padding(
-          padding: EdgeInsetsDirectional.fromSTEB(9, 0, 9, 0),
+          padding: const EdgeInsetsDirectional.fromSTEB(9, 0, 9, 0),
           child: Column(
             mainAxisSize: MainAxisSize.min, // Prevent overflow
             children: [
               Align(
-                alignment: AlignmentDirectional(-1, 0),
+                alignment: const AlignmentDirectional(-1, 0),
                 child: Padding(
-                  padding: EdgeInsetsDirectional.fromSTEB(10, 4, 0, 12),
+                  padding: const EdgeInsetsDirectional.fromSTEB(10, 4, 0, 12),
                   child: Text(
                     'Tasks',
                     style: GoogleFonts.montserrat(
@@ -145,14 +145,14 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
                 ),
               ),
               Align(
-                alignment: AlignmentDirectional(-1, 0),
+                alignment: const AlignmentDirectional(-1, 0),
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: whiteColor,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Center(child: Text('Task Details')),
+                  child: const Center(child: Text('Task Details')),
                 ),
               ),
             ],
@@ -171,9 +171,9 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
         borderRadius: BorderRadius.circular(5),
       ),
       child: Align(
-        alignment: AlignmentDirectional(0, 0),
+        alignment: const AlignmentDirectional(0, 0),
         child: Padding(
-          padding: EdgeInsetsDirectional.fromSTEB(0, 16.5, 0, 16.5),
+          padding: const EdgeInsetsDirectional.fromSTEB(0, 16.5, 0, 16.5),
           child: Column(
             mainAxisSize: MainAxisSize.max,
             mainAxisAlignment: MainAxisAlignment.center,
