@@ -16,6 +16,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
   String coachName = "Loading...";
   List<Map<String, dynamic>> users = [];
   final TextEditingController textController = TextEditingController();
+  bool isLoading = true; // Add loading state
 
   @override
   void initState() {
@@ -45,23 +46,35 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
   }
 
   Future<void> _fetchUsersData() async {
+    setState(() {
+      isLoading = true; // Start loading
+    });
+
     try {
-      QuerySnapshot userDocs = await FirebaseFirestore.instance.collection('users').get();
+      // Fetch only users with the role of 'player'
+      QuerySnapshot userDocs = await FirebaseFirestore.instance.collection('users')
+          .where('role', isEqualTo: 'Player')
+          .get();
       setState(() {
         users = userDocs.docs.map((doc) => {
           'name': doc['name'],
           'student_number': doc['studentNumber'],
           'id': doc.id,
         }).toList();
+        isLoading = false; // Stop loading
       });
     } catch (e) {
       print('Error fetching users: $e');
+      setState(() {
+        isLoading = false; // Stop loading even on error
+      });
     }
   }
 
   Future<void> _searchUsers(String query) async {
     try {
       QuerySnapshot searchResults = await FirebaseFirestore.instance.collection('users')
+          .where('role', isEqualTo: 'Player')  // Only players in the search
           .where('name', isGreaterThanOrEqualTo: query)
           .where('name', isLessThanOrEqualTo: '$query\uf8ff')
           .get();
@@ -194,6 +207,14 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
   }
 
   Widget _buildUsersTable() {
+    if (isLoading) {
+      return Center(child: CircularProgressIndicator()); // Show loading spinner
+    }
+
+    if (users.isEmpty) {
+      return Center(child: Text('No players found.')); // Show message when no users are found
+    }
+
     return Padding(
       padding: const EdgeInsets.all(10),
       child: Table(
