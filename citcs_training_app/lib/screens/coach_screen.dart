@@ -51,7 +51,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
     });
 
     try {
-      // Fetch only users with the role of 'player'
+      // Fetch only users with the role of 'Player'
       QuerySnapshot userDocs = await FirebaseFirestore.instance.collection('users')
           .where('role', isEqualTo: 'Player')
           .get();
@@ -91,10 +91,12 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
     }
   }
 
-  Future<void> _assignTask(String playerId, String task) async {
+  Future<void> _assignTask(String playerId, String taskName, String description) async {
     try {
-      await FirebaseFirestore.instance.collection('users').doc(playerId).update({
-        'tasks': FieldValue.arrayUnion([task]),
+      await FirebaseFirestore.instance.collection('users').doc(playerId).collection('tasks').add({
+        'taskName': taskName,
+        'description': description,
+        'status': 'Pending', // Default status when assigning a new task
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Task assigned successfully')),
@@ -284,15 +286,25 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
   }
 
   void _showAssignTaskDialog(String playerId, String playerName) {
-    TextEditingController taskController = TextEditingController();
+    TextEditingController taskNameController = TextEditingController();
+    TextEditingController descriptionController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: Text('Assign Task to $playerName'),
-          content: TextField(
-            controller: taskController,
-            decoration: InputDecoration(hintText: 'Enter task details'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: taskNameController,
+                decoration: InputDecoration(hintText: 'Enter task name'),
+              ),
+              TextField(
+                controller: descriptionController,
+                decoration: InputDecoration(hintText: 'Enter task description'),
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -303,7 +315,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
             ),
             TextButton(
               onPressed: () {
-                _assignTask(playerId, taskController.text.trim());
+                _assignTask(playerId, taskNameController.text.trim(), descriptionController.text.trim());
                 Navigator.of(context).pop();
               },
               child: Text('Assign'),
@@ -320,7 +332,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
       builder: (context) {
         return AlertDialog(
           title: Text('Stats for $playerName'),
-          content: Text('Stats will be displayed here.'),
+          content: Text('Player stats will be shown here.'),
           actions: [
             TextButton(
               onPressed: () {

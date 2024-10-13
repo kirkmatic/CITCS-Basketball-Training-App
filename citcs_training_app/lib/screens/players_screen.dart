@@ -14,6 +14,7 @@ class PlayersPageWidget extends StatefulWidget {
 class _PlayersPageWidgetState extends State<PlayersPageWidget> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   String playerName = "Player's Name"; // Default name before fetching actual name
+  List<Map<String, dynamic>> tasks = []; // Holds fetched tasks
 
   static const Color primaryColor = Color(0xFF450100);
   static const Color backgroundColor = Color(0xFFE5E5E5);
@@ -23,6 +24,7 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
   void initState() {
     super.initState();
     _fetchPlayerName();
+    _fetchPlayerTasks(); // Fetch tasks on initialization
   }
 
   // Fetch the player's name from Firestore
@@ -40,6 +42,82 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
     } catch (e) {
       print('Error fetching player name: $e');
     }
+  }
+
+  // Fetch tasks assigned to the player
+  Future<void> _fetchPlayerTasks() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        QuerySnapshot taskDocs = await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('tasks').get();
+        setState(() {
+          tasks = taskDocs.docs.map((doc) {
+            final taskData = doc.data() as Map<String, dynamic>;
+            print('Fetched task: ${taskData['taskName']} with description: ${taskData['description']}'); // Debug print
+            return taskData;
+          }).toList();
+        });
+      }
+    } catch (e) {
+      print('Error fetching player tasks: $e');
+    }
+  }
+
+  void _submitTask(String taskName) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Submit Task'),
+          content: Text('Are you sure you want to submit the task: $taskName?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                // Logic to mark the task as submitted in Firestore
+                Navigator.of(context).pop();
+              },
+              child: Text('Submit'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _confirmLogout() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Logout Confirmation'),
+          content: Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close the dialog
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                FirebaseAuth.instance.signOut();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginPageWidget()),
+                );
+              },
+              child: Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -85,13 +163,7 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
                 ),
               ),
               GestureDetector(
-                onTap: () {
-                  // Navigate to the login screen
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const LoginPageWidget()),
-                  );
-                },
+                onTap: _confirmLogout, // Call the confirm logout function
                 child: Text(
                   'Logout',
                   style: GoogleFonts.montserrat(
@@ -134,9 +206,9 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
               mainAxisSize: MainAxisSize.max,
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildStatusContainer('90%', 'Speed'), // Changed from Dribbling to Speed
-                _buildStatusContainer('85%', 'Strength'), // Changed from Passing to Strength
-                _buildStatusContainer('80%', 'Endurance'), // Changed from Shooting to Endurance
+                _buildStatusContainer('90%', 'Speed'),
+                _buildStatusContainer('85%', 'Strength'),
+                _buildStatusContainer('80%', 'Endurance'),
               ],
             ),
           ],
@@ -145,16 +217,15 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
     );
   }
 
-  // Extend this section to fill the remaining height
   Widget _buildTasksSection() {
-    return Expanded( // This makes the background extend to the bottom
+    return Expanded(
       child: Container(
         width: double.infinity,
-        color: backgroundColor, // Set background color for the entire section
+        color: backgroundColor,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0), // Adjust padding as necessary
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, // Align text to the left
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Tasks',
@@ -166,13 +237,13 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
               ),
               const SizedBox(height: 12),
               // Task items
-              _buildTaskItem('Complete Speed Drills', 'In Progress'),
-              const SizedBox(height: 8),
-              _buildTaskItem('Strength Training Session', 'Completed'),
-              const SizedBox(height: 8),
-              _buildTaskItem('Endurance Running Session', 'Pending'),
-              const SizedBox(height: 8),
-              _buildTaskItem('Team Strategy Meeting', 'Not Started'),
+              ...tasks.map((task) {
+                return _buildTaskItem(
+                  task['taskName'],
+                  task['status'],
+                  task['description'] ?? 'No description available', // Task description
+                );
+              }).toList(),
             ],
           ),
         ),
@@ -180,7 +251,7 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
     );
   }
 
-  Widget _buildTaskItem(String taskName, String taskStatus) {
+  Widget _buildTaskItem(String taskName, String taskStatus, String description) {
     // Colors based on task status
     Color statusColor;
     switch (taskStatus) {
@@ -197,42 +268,52 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
         statusColor = Colors.red; // Not Started or unknown
     }
 
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10.0),
-      ),
-      elevation: 4, // To give it a slight shadow
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween, // Task name on the left, status on the right
-          children: [
-            // Task name
-            Text(
-              taskName,
-              style: GoogleFonts.montserrat(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.black,
-              ),
-            ),
-            // Task status
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                taskStatus,
+    return GestureDetector(
+      onTap: () => _submitTask(taskName),
+      child: Card(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        elevation: 4,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column( // Change to Column to show more information
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                taskName,
                 style: GoogleFonts.montserrat(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: statusColor,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 4), // Space between task name and description
+              Text(
+                description,
+                style: GoogleFonts.montserrat(
+                  fontSize: 14,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 4), // Space between description and status
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  taskStatus,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -240,39 +321,31 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
 
   Widget _buildStatusContainer(String percentage, String label) {
     return Container(
-      width: 120, // Minimized width
+      width: 120,
       height: 102,
       decoration: BoxDecoration(
         color: primaryColor,
-        borderRadius: BorderRadius.circular(5),
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: Align(
-        alignment: const AlignmentDirectional(0, 0),
-        child: Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(0, 16.5, 0, 16.5),
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                percentage,
-                style: GoogleFonts.montserrat(
-                  color: whiteColor,
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                label,
-                style: GoogleFonts.montserrat(
-                  color: whiteColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            percentage,
+            style: GoogleFonts.montserrat(
+              color: whiteColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
           ),
-        ),
+          Text(
+            label,
+            style: GoogleFonts.montserrat(
+              color: whiteColor,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ],
       ),
     );
   }
