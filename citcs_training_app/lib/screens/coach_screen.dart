@@ -121,7 +121,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
     return Container(
       width: double.infinity,
       height: 60,
-      color: Colors.red[800],
+      color: const Color(0xFF450100),  // Updated color
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 9),
         child: Row(
@@ -169,10 +169,6 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
                 hintText: 'Search Player',
                 filled: true,
                 fillColor: Colors.grey[200],
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: Colors.red[800],
-                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -185,14 +181,11 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
               _searchUsers(textController.text.trim());
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[800],
+              backgroundColor: const Color(0xFF450100),  // Updated button color
             ),
-            child: Text(
+            child: const Text(  // Changed to a text instead of an icon
               'Search',
-              style: GoogleFonts.montserrat(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: Colors.white),
             ),
           ),
         ],
@@ -207,7 +200,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
         border: TableBorder.all(),
         children: [
           TableRow(
-            decoration: BoxDecoration(color: Colors.red[800]),
+            decoration: const BoxDecoration(color: Color(0xFF450100)),  // Updated color for the table header
             children: [
               _buildTableCell('Player Name', true),
               _buildTableCell('Student Number', true),
@@ -231,11 +224,13 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
   Widget _buildTableCell(String text, bool isHeader) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: Text(
-        text,
-        style: GoogleFonts.montserrat(
-          fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
-          color: isHeader ? Colors.white : Colors.black,
+      child: Center(  // Centering the content
+        child: Text(
+          text,
+          style: GoogleFonts.montserrat(
+            fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
+            color: isHeader ? Colors.white : Colors.black,
+          ),
         ),
       ),
     );
@@ -244,22 +239,25 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
   Widget _buildActionsCell(Map<String, dynamic> user) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(Icons.bar_chart, color: Colors.blue[800]),
-            onPressed: () {
-              _showStatsDialog(user['name']);
-            },
-          ),
-          const SizedBox(width: 5),
-          IconButton(
-            icon: Icon(Icons.assignment, color: Colors.red[800]),
-            onPressed: () {
-              _showAssignTaskDialog(user['id'], user['name']);
-            },
-          ),
-        ],
+      child: Center(  // Centering the icons and buttons
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,  // Centering the icons within the row
+          children: [
+            IconButton(
+              icon: Icon(Icons.bar_chart, color: Colors.blue[800]),
+              onPressed: () {
+                _showStatsDialog(user['name']);
+              },
+            ),
+            const SizedBox(width: 5),
+            IconButton(
+              icon: Icon(Icons.assignment, color: Colors.red[800]),
+              onPressed: () {
+                _showAssignTaskDialog(user['id'], user['name']);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
