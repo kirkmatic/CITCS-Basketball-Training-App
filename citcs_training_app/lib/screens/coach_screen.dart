@@ -109,6 +109,53 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
     }
   }
 
+  Future<void> _viewTasks(String playerId, String playerName) async {
+    // Fetch the tasks assigned to the player
+    List<Map<String, dynamic>> tasks = [];
+    try {
+      QuerySnapshot taskDocs = await FirebaseFirestore.instance.collection('users')
+          .doc(playerId).collection('tasks').get();
+      tasks = taskDocs.docs.map((doc) => {
+        'taskName': doc['taskName'],
+        'description': doc['description'],
+        'status': doc['status'],
+      }).toList();
+    } catch (e) {
+      print('Error fetching tasks: $e');
+    }
+
+    // Show the tasks in a dialog
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Tasks for $playerName'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              children: tasks.isEmpty
+                  ? [Text('No tasks assigned')]
+                  : tasks.map((task) {
+                      return ListTile(
+                        title: Text(task['taskName']),
+                        subtitle: Text('Description: ${task['description']}\nStatus: ${task['status']}'),
+                      );
+                    }).toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -277,6 +324,13 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
               icon: Icon(Icons.assignment, color: Colors.red[800]),
               onPressed: () {
                 _showAssignTaskDialog(user['id'], user['name']);
+              },
+            ),
+            const SizedBox(width: 5),
+            IconButton(
+              icon: Icon(Icons.task, color: Colors.green[800]),
+              onPressed: () {
+                _viewTasks(user['id'], user['name']);
               },
             ),
           ],

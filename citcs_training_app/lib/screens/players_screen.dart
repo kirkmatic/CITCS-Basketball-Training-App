@@ -1,8 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'login_screen.dart'; // Ensure you have this import to access LoginPageWidget
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart'; // Import for kIsWeb
+import 'dart:html' as html; // For web file handling
+import 'dart:typed_data'; // For handling byte data
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+// Function to handle video picking based on platform
+Future<void> pickVideo() async {
+  if (kIsWeb) {
+    // Handle web-specific video picking
+  } else {
+    // Handle mobile-specific video picking
+  }
+}
+
 
 class PlayersPageWidget extends StatefulWidget {
   const PlayersPageWidget({super.key});
@@ -15,6 +30,7 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   String playerName = "Player's Name"; // Default name before fetching actual name
   List<Map<String, dynamic>> tasks = []; // Holds fetched tasks
+  File? _selectedVideo; // File to hold the picked video
 
   static const Color primaryColor = Color(0xFF450100);
   static const Color backgroundColor = Color(0xFFE5E5E5);
@@ -53,7 +69,6 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
         setState(() {
           tasks = taskDocs.docs.map((doc) {
             final taskData = doc.data() as Map<String, dynamic>;
-            print('Fetched task: ${taskData['taskName']} with description: ${taskData['description']}'); // Debug print
             return taskData;
           }).toList();
         });
@@ -63,26 +78,78 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
     }
   }
 
+  // Pick a video from the user's device or browser
+Future<void> _pickVideo() async {
+  FilePickerResult? result;
+
+  if (kIsWeb) {
+    // For web platform
+    final input = html.FileUploadInputElement();
+    input.accept = 'video/*';
+    input.click();
+
+    input.onChange.listen((e) async {
+      final files = input.files;
+      if (files!.isEmpty) return;
+
+      final reader = html.FileReader();
+      reader.readAsArrayBuffer(files[0]);
+      reader.onLoadEnd.listen((e) {
+        final bytes = reader.result as Uint8List; // Use Uint8List for web
+        setState(() {
+          _selectedVideo = File.fromRawPath(bytes);
+        });
+      });
+    });
+  } else {
+    // For mobile platforms
+    result = await FilePicker.platform.pickFiles(
+      type: FileType.video,
+    );
+
+    // Use conditional access operator to check for null
+    if (result?.files.isNotEmpty == true && result?.files.single.path != null) {
+      setState(() {
+        _selectedVideo = File(result!.files.single.path!);
+      });
+    } else {
+      print('No video selected');
+    }
+  }
+}
+
+
+  // Submit the task with video upload
   void _submitTask(String taskName) {
+    if (_selectedVideo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please upload a video before submission.')),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Submit Task'),
+          title: const Text('Submit Task'),
           content: Text('Are you sure you want to submit the task: $taskName?'),
           actions: [
             TextButton(
-              onPressed: () {
-                // Logic to mark the task as submitted in Firestore
+              onPressed: () async {
+                await _uploadVideo(taskName); // Upload video and update status
+                setState(() {
+                  _selectedVideo = null; // Clear the video after submission
+                });
                 Navigator.of(context).pop();
               },
-              child: Text('Submit'),
+              child: const Text('Submit'),
             ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
           ],
         );
@@ -90,34 +157,27 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
     );
   }
 
-  void _confirmLogout() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Logout Confirmation'),
-          content: Text('Are you sure you want to logout?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Close the dialog
-              },
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                FirebaseAuth.instance.signOut();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginPageWidget()),
-                );
-              },
-              child: Text('Logout'),
-            ),
-          ],
-        );
-      },
-    );
+  // Function to upload video to Firebase Storage
+  Future<void> _uploadVideo(String taskName) async {
+    // Get current user
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // Upload video to Firebase Storage
+      final storageRef = FirebaseStorage.instance.ref().child('videos/${user.uid}/$taskName.mp4');
+      await storageRef.putFile(_selectedVideo!);
+
+      // Mark the task as completed in Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('tasks')
+          .doc(taskName)
+          .update({'status': 'Completed'});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Task submitted successfully!')),
+      );
+    }
   }
 
   @override
@@ -133,7 +193,7 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
             children: [
               _buildHeader(),
               _buildStatusSection(),
-              _buildTasksSection(), // Extend the background to the bottom
+              _buildTasksSection(),
             ],
           ),
         ),
@@ -163,7 +223,10 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
                 ),
               ),
               GestureDetector(
-                onTap: _confirmLogout, // Call the confirm logout function
+                onTap: () {
+                  FirebaseAuth.instance.signOut();
+                  Navigator.pushReplacementNamed(context, '/login');
+                },
                 child: Text(
                   'Logout',
                   style: GoogleFonts.montserrat(
@@ -236,12 +299,11 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
                 ),
               ),
               const SizedBox(height: 12),
-              // Task items
               ...tasks.map((task) {
                 return _buildTaskItem(
-                  task['taskName'],
-                  task['status'],
-                  task['description'] ?? 'No description available', // Task description
+                  task['taskName'] ?? 'Unnamed Task', // Null safety added
+                  task['status'] ?? 'Pending', // Default status if null
+                  task['description'] ?? 'No description available',
                 );
               }).toList(),
             ],
@@ -252,7 +314,6 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
   }
 
   Widget _buildTaskItem(String taskName, String taskStatus, String description) {
-    // Colors based on task status
     Color statusColor;
     switch (taskStatus) {
       case 'Completed':
@@ -265,88 +326,56 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
         statusColor = Colors.blue;
         break;
       default:
-        statusColor = Colors.red; // Not Started or unknown
+        statusColor = Colors.red;
     }
 
-    return GestureDetector(
-      onTap: () => _submitTask(taskName),
-      child: Card(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.0),
+    return Card(
+      color: whiteColor,
+      elevation: 4,
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      child: ListTile(
+        title: Text(
+          taskName,
+          style: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
         ),
-        elevation: 4,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column( // Change to Column to show more information
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                taskName,
-                style: GoogleFonts.montserrat(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 4), // Space between task name and description
-              Text(
-                description,
-                style: GoogleFonts.montserrat(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                ),
-              ),
-              const SizedBox(height: 4), // Space between description and status
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  taskStatus,
-                  style: GoogleFonts.montserrat(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: statusColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
+        subtitle: Text(description),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              taskStatus,
+              style: TextStyle(color: statusColor),
+            ),
+            const SizedBox(height: 4),
+            ElevatedButton(
+              onPressed: () {
+                _pickVideo(); // Pick video
+                // Call submit after picking to avoid premature submission
+                _submitTask(taskName); // Submit the task
+              },
+              child: const Text('Submit Video'),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusContainer(String percentage, String label) {
-    return Container(
-      width: 120,
-      height: 102,
-      decoration: BoxDecoration(
-        color: primaryColor,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            percentage,
-            style: GoogleFonts.montserrat(
-              color: whiteColor,
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
+  Widget _buildStatusContainer(String percentage, String title) {
+    return Column(
+      children: [
+        Text(
+          percentage,
+          style: GoogleFonts.montserrat(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
           ),
-          Text(
-            label,
-            style: GoogleFonts.montserrat(
-              color: whiteColor,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ],
-      ),
+        ),
+        Text(
+          title,
+          style: GoogleFonts.montserrat(fontSize: 14),
+        ),
+      ],
     );
   }
 }
