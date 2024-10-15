@@ -21,6 +21,8 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
   String playerName = "Player's Name"; // Default name before fetching actual name
   List<Map<String, dynamic>> tasks = []; // Holds fetched tasks
   File? _selectedVideo; // File to hold the picked video
+  File? _selectedMobileVideo; // For mobile file handling
+  Uint8List? _selectedWebVideo; // For web handling
 
   static const Color primaryColor = Color(0xFF450100);
   static const Color backgroundColor = Color(0xFFE5E5E5);
@@ -81,103 +83,59 @@ Future<void> _fetchPlayerTasks() async {
 }
 
 
-  // Pick a video from the user's device or browser
- // Pick a video from the user's device or browser
+// Pick a video from the user's device or browser
 Future<void> _pickVideo() async {
-  File? _selectedMobileVideo; // For mobile file handling
-  Uint8List? _selectedWebVideo; // For web handling
   if (kIsWeb) {
-    // For web platform
     final input = html.FileUploadInputElement();
     input.accept = 'video/*';
     input.click();
 
     input.onChange.listen((e) async {
       final files = input.files;
-      if (files!.isEmpty) return;
-
-      final reader = html.FileReader();
-      reader.readAsArrayBuffer(files[0]);
-      reader.onLoadEnd.listen((e) {
-        final bytes = reader.result as Uint8List; // Use Uint8List for web
-        setState(() {
-          _selectedWebVideo = bytes; // Store Uint8List for web
+      if (files != null && files.isNotEmpty) {
+        final reader = html.FileReader();
+        reader.readAsArrayBuffer(files[0]);
+        reader.onLoadEnd.listen((e) {
+          final bytes = reader.result as Uint8List; // Store Uint8List for web
+          setState(() {
+            _selectedWebVideo = bytes; 
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Video selected')),
+    ); // Debugging line
         });
-      });
+      } else {
+        print('No video selected');
+      }
     });
-  } else {
-    // For mobile platforms
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.video,
-    );
-
-    if (result != null && result.files.isNotEmpty && result.files.single.path != null) {
-      setState(() {
-        _selectedMobileVideo = File(result.files.single.path!); // Store mobile File
-      });
-    } else {
-      print('No video selected');
-    }
   }
 }
 
-
-
-
-  // Show a confirmation dialog before submitting the task
-  void _showConfirmationDialog(String taskId) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Submit Task'),
-          content: const Text('Are you sure you want to submit the task?'),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                await _uploadVideo(taskId); // Upload video and update status
-                _clearSelectedVideo(); // Clear the video after submission
-                Navigator.of(context).pop();
-              },
-              child: const Text('Submit'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // Clear the selected video
-  void _clearSelectedVideo() {
-    setState(() {
-      _selectedVideo = null; // Clear the video after submission
-    });
-  }
-
-  // Function to upload video to Firebase Storage
-// Function to upload video to Firebase Storage
 // Function to upload video to Firebase Storage
 Future<void> _uploadVideo(String taskId) async {
-  File? _selectedMobileVideo; // For mobile file handling
-Uint8List? _selectedWebVideo; // For web handling
+  // Ensure at least one video selection has been made
+  if (_selectedWebVideo == null && _selectedMobileVideo == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please select a video to upload.')),
+    );
+    return; // Exit early if no video is selected
+  }
+
+  // Define the video path based on the current user ID and task ID
+  final videoPath = 'videos/${FirebaseAuth.instance.currentUser!.uid}/$taskId.mp4';
+  final ref = FirebaseStorage.instance.ref().child(videoPath);
+
   try {
-    // Check which video has been selected based on platform
-    if (_selectedWebVideo == null && _selectedMobileVideo == null) return;
-
-    // Define the video path based on the current user ID and task ID
-    final videoPath = 'videos/${FirebaseAuth.instance.currentUser!.uid}/$taskId.mp4';
-    final ref = FirebaseStorage.instance.ref().child(videoPath);
-
     if (kIsWeb) {
       // For web platform, upload the Uint8List directly
-      await ref.putData(_selectedWebVideo!, SettableMetadata(contentType: 'video/mp4'));
+      if (_selectedWebVideo != null) {
+        await ref.putData(_selectedWebVideo!, SettableMetadata(contentType: 'video/mp4'));
+      }
     } else {
       // For mobile platforms, upload the File directly
-      await ref.putFile(_selectedMobileVideo!);
+      if (_selectedMobileVideo != null) {
+        await ref.putFile(_selectedMobileVideo!);
+      }
     }
 
     // Get the video URL after upload completes
@@ -194,9 +152,7 @@ Uint8List? _selectedWebVideo; // For web handling
       'status': 'Video Attached', // Update status
     });
 
-    print('Video uploaded and URL updated in Firestore.');
-
-    // Show success message
+    print('Video uploaded successfully: $videoUrl');
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Video uploaded successfully!')),
     );
@@ -208,6 +164,33 @@ Uint8List? _selectedWebVideo; // For web handling
   }
 }
 
+Future<void> _showConfirmationDialog(String taskId) async {
+  return showDialog<void>(
+    context: context,
+    barrierDismissible: false, // User must tap button to dismiss dialog
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('Confirm Upload'),
+        content: const Text('Are you sure you want to upload the video for this task?'),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the dialog
+            },
+          ),
+          TextButton(
+            child: const Text('Confirm'),
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the dialog
+              _uploadVideo(taskId); // Call your upload method here
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -407,17 +390,20 @@ Widget _buildTaskItem(Map<String, dynamic> task) {
                 child: const Text('Upload Video'),
               ),
               ElevatedButton(
-                onPressed: () {
-                  if (_selectedVideo != null) {
-                    _showConfirmationDialog(taskId); // Show confirmation for submission
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please upload a video first.')),
-                    );
-                  }
-                },
-                child: const Text('Submit Task'),
-              ),
+                  onPressed: () {
+                    // Check if either mobile or web video has been selected
+                       print('Web video: $_selectedWebVideo');
+                    if ( _selectedWebVideo != null) {
+                      _showConfirmationDialog(taskId); // Show confirmation for submission
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please upload a video first.')),
+                      );
+                    }
+                  },
+                  child: const Text('Submit Task'),
+                ),
+
             ],
           ),
           const SizedBox(height: 8.0),
