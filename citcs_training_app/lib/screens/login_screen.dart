@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:citcs_training_app/screens/signup_screen.dart'; // Correct import for SignupPageWidget
-import 'package:citcs_training_app/screens/players_screen.dart';
-import 'package:citcs_training_app/screens/coach_screen.dart'; // Import for CoachScreen
+import 'package:google_fonts/google_fonts.dart';// Import for CoachScreen
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 

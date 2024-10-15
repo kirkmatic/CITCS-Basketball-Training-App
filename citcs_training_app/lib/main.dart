@@ -4,7 +4,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:citcs_training_app/screens/login_screen.dart';
 import 'package:citcs_training_app/screens/players_screen.dart';
 import 'package:citcs_training_app/screens/signup_screen.dart';
-import 'package:citcs_training_app/screens/login_screen.dart';
 import 'package:flutter/foundation.dart';
 
 void main() async {
@@ -51,10 +50,10 @@ class MyApp extends StatelessWidget {
       routes: {
         // Define the routes for your app
         '/login': (context) => const LoginPageWidget(),
-        '/player': (context) => const PlayersPageWidget(),
-        '/signup': (context)  => const SignupPageWidget(),
-        '/coach' : (context) => const CoachesPageWidget()
-      }
+        '/player': (context) => PlayersPageWidget(), 
+        '/signup': (context) => const SignupPageWidget(),
+        '/coach': (context) => const CoachesPageWidget(),
+      },
     );
   }
 }
