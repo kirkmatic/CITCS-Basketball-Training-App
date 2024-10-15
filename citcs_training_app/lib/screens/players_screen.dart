@@ -7,17 +7,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart'; // Import for kIsWeb
 import 'dart:html' as html; // For web file handling
 import 'dart:typed_data'; // For handling byte data
-import 'package:flutter/foundation.dart' show kIsWeb;
-
-// Function to handle video picking based on platform
-Future<void> pickVideo() async {
-  if (kIsWeb) {
-    // Handle web-specific video picking
-  } else {
-    // Handle mobile-specific video picking
-  }
-}
-
+import 'dart:io'; // For mobile file handling
 
 class PlayersPageWidget extends StatefulWidget {
   const PlayersPageWidget({super.key});
@@ -48,7 +38,10 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
         if (userDoc.exists && userDoc['name'] != null) {
           setState(() {
             playerName = userDoc['name']; // Fetch and set the player's name
@@ -61,27 +54,38 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
   }
 
   // Fetch tasks assigned to the player
-  Future<void> _fetchPlayerTasks() async {
-    try {
-      User? user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        QuerySnapshot taskDocs = await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('tasks').get();
-        setState(() {
-          tasks = taskDocs.docs.map((doc) {
-            final taskData = doc.data() as Map<String, dynamic>;
-            return taskData;
-          }).toList();
-        });
-      }
-    } catch (e) {
-      print('Error fetching player tasks: $e');
+  // Fetch tasks assigned to the player
+Future<void> _fetchPlayerTasks() async {
+  try {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      QuerySnapshot taskDocs = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('tasks')
+          .get();
+      setState(() {
+        tasks = taskDocs.docs.map((doc) {
+          final taskData = doc.data() as Map<String, dynamic>;
+          // Add the document ID to the task data
+          return {
+            'id': doc.id, // Add this line to include the task ID
+            ...taskData, // Spread operator to include other task data
+          };
+        }).toList();
+      });
     }
+  } catch (e) {
+    debugPrint('Error fetching player tasks: $e');
   }
+}
+
 
   // Pick a video from the user's device or browser
+ // Pick a video from the user's device or browser
 Future<void> _pickVideo() async {
-  FilePickerResult? result;
-
+  File? _selectedMobileVideo; // For mobile file handling
+  Uint8List? _selectedWebVideo; // For web handling
   if (kIsWeb) {
     // For web platform
     final input = html.FileUploadInputElement();
@@ -97,20 +101,19 @@ Future<void> _pickVideo() async {
       reader.onLoadEnd.listen((e) {
         final bytes = reader.result as Uint8List; // Use Uint8List for web
         setState(() {
-          _selectedVideo = File.fromRawPath(bytes);
+          _selectedWebVideo = bytes; // Store Uint8List for web
         });
       });
     });
   } else {
     // For mobile platforms
-    result = await FilePicker.platform.pickFiles(
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.video,
     );
 
-    // Use conditional access operator to check for null
-    if (result?.files.isNotEmpty == true && result?.files.single.path != null) {
+    if (result != null && result.files.isNotEmpty && result.files.single.path != null) {
       setState(() {
-        _selectedVideo = File(result!.files.single.path!);
+        _selectedMobileVideo = File(result.files.single.path!); // Store mobile File
       });
     } else {
       print('No video selected');
@@ -119,36 +122,27 @@ Future<void> _pickVideo() async {
 }
 
 
-  // Submit the task with video upload
-  void _submitTask(String taskName) {
-    if (_selectedVideo == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please upload a video before submission.')),
-      );
-      return;
-    }
 
+
+  // Show a confirmation dialog before submitting the task
+  void _showConfirmationDialog(String taskId) {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: const Text('Submit Task'),
-          content: Text('Are you sure you want to submit the task: $taskName?'),
+          content: const Text('Are you sure you want to submit the task?'),
           actions: [
             TextButton(
               onPressed: () async {
-                await _uploadVideo(taskName); // Upload video and update status
-                setState(() {
-                  _selectedVideo = null; // Clear the video after submission
-                });
+                await _uploadVideo(taskId); // Upload video and update status
+                _clearSelectedVideo(); // Clear the video after submission
                 Navigator.of(context).pop();
               },
               child: const Text('Submit'),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(context).pop(),
               child: const Text('Cancel'),
             ),
           ],
@@ -157,28 +151,63 @@ Future<void> _pickVideo() async {
     );
   }
 
-  // Function to upload video to Firebase Storage
-  Future<void> _uploadVideo(String taskName) async {
-    // Get current user
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      // Upload video to Firebase Storage
-      final storageRef = FirebaseStorage.instance.ref().child('videos/${user.uid}/$taskName.mp4');
-      await storageRef.putFile(_selectedVideo!);
-
-      // Mark the task as completed in Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('tasks')
-          .doc(taskName)
-          .update({'status': 'Completed'});
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Task submitted successfully!')),
-      );
-    }
+  // Clear the selected video
+  void _clearSelectedVideo() {
+    setState(() {
+      _selectedVideo = null; // Clear the video after submission
+    });
   }
+
+  // Function to upload video to Firebase Storage
+// Function to upload video to Firebase Storage
+// Function to upload video to Firebase Storage
+Future<void> _uploadVideo(String taskId) async {
+  File? _selectedMobileVideo; // For mobile file handling
+Uint8List? _selectedWebVideo; // For web handling
+  try {
+    // Check which video has been selected based on platform
+    if (_selectedWebVideo == null && _selectedMobileVideo == null) return;
+
+    // Define the video path based on the current user ID and task ID
+    final videoPath = 'videos/${FirebaseAuth.instance.currentUser!.uid}/$taskId.mp4';
+    final ref = FirebaseStorage.instance.ref().child(videoPath);
+
+    if (kIsWeb) {
+      // For web platform, upload the Uint8List directly
+      await ref.putData(_selectedWebVideo!, SettableMetadata(contentType: 'video/mp4'));
+    } else {
+      // For mobile platforms, upload the File directly
+      await ref.putFile(_selectedMobileVideo!);
+    }
+
+    // Get the video URL after upload completes
+    final videoUrl = await ref.getDownloadURL();
+
+    // Update Firestore with the video URL
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(FirebaseAuth.instance.currentUser!.uid)
+        .collection('tasks')
+        .doc(taskId)
+        .update({
+      'videoUrl': videoUrl,
+      'status': 'Video Attached', // Update status
+    });
+
+    print('Video uploaded and URL updated in Firestore.');
+
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Video uploaded successfully!')),
+    );
+  } catch (e) {
+    print('Error uploading video: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Error uploading video. Please try again.')),
+    );
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -295,17 +324,18 @@ Future<void> _pickVideo() async {
                 style: GoogleFonts.montserrat(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
                 ),
               ),
-              const SizedBox(height: 12),
-              ...tasks.map((task) {
-                return _buildTaskItem(
-                  task['taskName'] ?? 'Unnamed Task', // Null safety added
-                  task['status'] ?? 'Pending', // Default status if null
-                  task['description'] ?? 'No description available',
-                );
-              }).toList(),
+              const SizedBox(height: 8.0),
+              tasks.isNotEmpty
+                  ? ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: tasks.length,
+                      itemBuilder: (context, index) {
+                        return _buildTaskItem(tasks[index]);
+                      },
+                    )
+                  : const Center(child: Text('No tasks assigned.')),
             ],
           ),
         ),
@@ -313,69 +343,118 @@ Future<void> _pickVideo() async {
     );
   }
 
-  Widget _buildTaskItem(String taskName, String taskStatus, String description) {
-    Color statusColor;
-    switch (taskStatus) {
-      case 'Completed':
-        statusColor = Colors.green;
-        break;
-      case 'In Progress':
-        statusColor = Colors.orange;
-        break;
-      case 'Pending':
-        statusColor = Colors.blue;
-        break;
-      default:
-        statusColor = Colors.red;
-    }
-
-    return Card(
-      color: whiteColor,
-      elevation: 4,
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      child: ListTile(
-        title: Text(
-          taskName,
-          style: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(description),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              taskStatus,
-              style: TextStyle(color: statusColor),
-            ),
-            const SizedBox(height: 4),
-            ElevatedButton(
-              onPressed: () {
-                _pickVideo(); // Pick video
-                // Call submit after picking to avoid premature submission
-                _submitTask(taskName); // Submit the task
-              },
-              child: const Text('Submit Video'),
-            ),
-          ],
-        ),
-      ),
-    );
+Widget _buildTaskItem(Map<String, dynamic> task) {
+  // Extract relevant fields from the task
+  String taskId = task['id']; // Extract task ID
+  String taskName = task['taskName'] ?? 'Unnamed Task';
+  String taskDescription = task['description'] ?? 'No description available';
+  String taskStatus = task['status'] ?? 'Pending'; // Default to 'Pending' if status is null
+  String? videoUrl = task['videoUrl']; // Video URL if available
+  
+  Color statusColor;
+  switch (taskStatus) {
+    case 'Completed':
+      statusColor = Colors.green;
+      break;
+    case 'In Progress':
+      statusColor = Colors.orange;
+      break;
+    case 'Pending':
+      statusColor = Colors.blue;
+      break;
+    case 'Video Attached':
+      statusColor = Colors.purple; // New status color for video attached
+      break;
+    default:
+      statusColor = Colors.red; // For unrecognized statuses
   }
 
-  Widget _buildStatusContainer(String percentage, String title) {
-    return Column(
-      children: [
-        Text(
-          percentage,
-          style: GoogleFonts.montserrat(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+  return Card(
+    color: whiteColor,
+    elevation: 4,
+    margin: const EdgeInsets.symmetric(vertical: 8.0),
+    child: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            taskName,
+            style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 16),
           ),
-        ),
-        Text(
-          title,
-          style: GoogleFonts.montserrat(fontSize: 14),
-        ),
-      ],
+          const SizedBox(height: 8.0),
+          Text(
+            taskDescription,
+            style: GoogleFonts.montserrat(fontSize: 14),
+          ),
+          const SizedBox(height: 8.0),
+          if (videoUrl != null && videoUrl.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                'Video Attached',
+                style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold),
+              ),
+            ),
+          const SizedBox(height: 8.0),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  _pickVideo(); // Allow video selection
+                },
+                child: const Text('Upload Video'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (_selectedVideo != null) {
+                    _showConfirmationDialog(taskId); // Show confirmation for submission
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please upload a video first.')),
+                    );
+                  }
+                },
+                child: const Text('Submit Task'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8.0),
+          Text(
+            taskStatus,
+            style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+
+  Widget _buildStatusContainer(String value, String label) {
+    return Container(
+      padding: const EdgeInsets.all(8.0),
+      decoration: BoxDecoration(
+        color: whiteColor,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: const [
+          BoxShadow(color: Colors.grey, blurRadius: 4, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            label,
+            style: GoogleFonts.montserrat(fontSize: 14),
+          ),
+        ],
+      ),
     );
   }
 }

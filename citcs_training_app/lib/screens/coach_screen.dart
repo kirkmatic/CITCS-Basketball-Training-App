@@ -119,6 +119,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
         'taskName': doc['taskName'],
         'description': doc['description'],
         'status': doc['status'],
+        'videoUrl' : doc['videoUrl']
       }).toList();
     } catch (e) {
       print('Error fetching tasks: $e');
