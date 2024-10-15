@@ -20,7 +20,6 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   String playerName = "Player's Name"; // Default name before fetching actual name
   List<Map<String, dynamic>> tasks = []; // Holds fetched tasks
-  File? _selectedVideo; // File to hold the picked video
   File? _selectedMobileVideo; // For mobile file handling
   Uint8List? _selectedWebVideo; // For web handling
 
@@ -84,8 +83,10 @@ Future<void> _fetchPlayerTasks() async {
 
 
 // Pick a video from the user's device or browser
-Future<void> _pickVideo() async {
+// Pick a video from the user's device or browser
+Future<void> _pickVideo(String taskId) async {
   if (kIsWeb) {
+    // For web platform
     final input = html.FileUploadInputElement();
     input.accept = 'video/*';
     input.click();
@@ -95,22 +96,54 @@ Future<void> _pickVideo() async {
       if (files != null && files.isNotEmpty) {
         final reader = html.FileReader();
         reader.readAsArrayBuffer(files[0]);
-        reader.onLoadEnd.listen((e) {
-          final bytes = reader.result as Uint8List; // Store Uint8List for web
+        reader.onLoadEnd.listen((e) async {
+          final bytes = reader.result as Uint8List; // Use Uint8List for web
           setState(() {
-            _selectedWebVideo = bytes; 
+            _selectedWebVideo = bytes; // Store Uint8List for web
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Video selected')),
-    ); // Debugging line
+
+          // Update Firestore status after video selection
+          await _updateTaskStatus(taskId, 'Video Attached');
         });
       } else {
         print('No video selected');
       }
     });
+  } else {
+    // For mobile platforms
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.video,
+    );
+
+    if (result != null && result.files.isNotEmpty && result.files.single.path != null) {
+      setState(() {
+        _selectedMobileVideo = File(result.files.single.path!); // Store mobile File
+      });
+
+      // Update Firestore status after video selection
+      await _updateTaskStatus(taskId, 'Video Attached');
+    } else {
+      print('No video selected');
+    }
   }
 }
 
+// Function to update the task status in Firestore
+Future<void> _updateTaskStatus(String taskId, String status) async {
+  try {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(FirebaseAuth.instance.currentUser!.uid)
+        .collection('tasks')
+        .doc(taskId)
+        .update({
+      'status': status, // Update the status field
+    });
+    print('Task status updated to: $status');
+  } catch (e) {
+    print('Error updating task status: $e');
+  }
+}
 // Function to upload video to Firebase Storage
 Future<void> _uploadVideo(String taskId) async {
   // Ensure at least one video selection has been made
@@ -181,9 +214,12 @@ Future<void> _showConfirmationDialog(String taskId) async {
           ),
           TextButton(
             child: const Text('Confirm'),
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(context).pop(); // Close the dialog
-              _uploadVideo(taskId); // Call your upload method here
+              // Call your upload method here
+              await _uploadVideo(taskId);
+              // Update the task status after upload
+              await _updateTaskStatus(taskId, 'Done');
             },
           ),
         ],
@@ -213,47 +249,79 @@ Future<void> _showConfirmationDialog(String taskId) async {
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      height: 60,
-      color: primaryColor,
-      child: Align(
-        alignment: AlignmentDirectional.center,
-        child: Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(9, 0, 9, 0),
-          child: Row(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                playerName,
+Widget _buildHeader() {
+  return Container(
+    width: double.infinity,
+    height: 60,
+    color: primaryColor,
+    child: Align(
+      alignment: AlignmentDirectional.center,
+      child: Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(9, 0, 9, 0),
+        child: Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              playerName,
+              style: GoogleFonts.montserrat(
+                fontWeight: FontWeight.bold,
+                color: whiteColor,
+                fontSize: 18,
+              ),
+            ),
+            GestureDetector(
+              onTap: () {
+                // Show the logout confirmation dialog
+                _showLogoutConfirmationDialog(context);
+              },
+              child: Text(
+                'Logout',
                 style: GoogleFonts.montserrat(
                   fontWeight: FontWeight.bold,
                   color: whiteColor,
-                  fontSize: 18,
+                  fontSize: 16,
                 ),
               ),
-              GestureDetector(
-                onTap: () {
-                  FirebaseAuth.instance.signOut();
-                  Navigator.pushReplacementNamed(context, '/login');
-                },
-                child: Text(
-                  'Logout',
-                  style: GoogleFonts.montserrat(
-                    fontWeight: FontWeight.bold,
-                    color: whiteColor,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
+// Function to show the logout confirmation dialog
+void _showLogoutConfirmationDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () {
+              // Close the dialog without logging out
+              Navigator.of(context).pop();
+            },
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              // Proceed with logout
+              FirebaseAuth.instance.signOut();
+              Navigator.of(context).pop(); // Close the dialog
+              Navigator.pushReplacementNamed(context, '/login'); // Navigate to login
+            },
+            child: const Text('Logout'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 
   Widget _buildStatusSection() {
     return Container(
@@ -385,7 +453,7 @@ Widget _buildTaskItem(Map<String, dynamic> task) {
             children: [
               ElevatedButton(
                 onPressed: () {
-                  _pickVideo(); // Allow video selection
+                  _pickVideo(taskId); // Allow video selection
                 },
                 child: const Text('Upload Video'),
               ),

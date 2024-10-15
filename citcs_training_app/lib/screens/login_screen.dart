@@ -49,15 +49,9 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
 
         // Navigate to the appropriate screen based on the user role
         if (userRole == 'Player') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const PlayersPageWidget()),
-          );
+            Navigator.pushReplacementNamed(context, '/player');
         } else if (userRole == 'Coach') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const CoachesPageWidget()), // Ensure CoachScreen is imported
-          );
+            Navigator.pushReplacementNamed(context, '/coach');
         } else {
           // Handle unknown roles if necessary
           ScaffoldMessenger.of(context).showSnackBar(
@@ -217,12 +211,7 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
                         ),
                         TextButton(
                           onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SignupPageWidget(),
-                              ),
-                            );
+                            Navigator.pushReplacementNamed(context, '/signup');
                           },
                           child: Text(
                             "Sign up",

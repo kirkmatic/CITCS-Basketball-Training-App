@@ -1,5 +1,9 @@
+import 'package:citcs_training_app/screens/coach_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:citcs_training_app/screens/login_screen.dart';
+import 'package:citcs_training_app/screens/players_screen.dart';
+import 'package:citcs_training_app/screens/signup_screen.dart';
 import 'package:citcs_training_app/screens/login_screen.dart';
 import 'package:flutter/foundation.dart';
 
@@ -43,7 +47,14 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
         useMaterial3: true,
       ),
-      home: const LoginPageWidget(),
+      initialRoute: '/login',
+      routes: {
+        // Define the routes for your app
+        '/login': (context) => const LoginPageWidget(),
+        '/player': (context) => const PlayersPageWidget(),
+        '/signup': (context)  => const SignupPageWidget(),
+        '/coach' : (context) => const CoachesPageWidget()
+      }
     );
   }
 }
