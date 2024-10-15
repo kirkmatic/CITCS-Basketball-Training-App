@@ -55,7 +55,6 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
   }
 
   // Fetch tasks assigned to the player
-  // Fetch tasks assigned to the player
 Future<void> _fetchPlayerTasks() async {
   try {
     User? user = FirebaseAuth.instance.currentUser;
@@ -81,8 +80,6 @@ Future<void> _fetchPlayerTasks() async {
   }
 }
 
-
-// Pick a video from the user's device or browser
 // Pick a video from the user's device or browser
 Future<void> _pickVideo(String taskId) async {
   if (kIsWeb) {
@@ -216,10 +213,9 @@ Future<void> _showConfirmationDialog(String taskId) async {
             child: const Text('Confirm'),
             onPressed: () async {
               Navigator.of(context).pop(); // Close the dialog
-              // Call your upload method here
-              await _uploadVideo(taskId);
-              // Update the task status after upload
-              await _updateTaskStatus(taskId, 'Done');
+              await _uploadVideo(taskId); // Upload the video
+              await _updateTaskStatus(taskId, 'Done'); // Update task status to "Done"
+              Navigator.pushReplacementNamed(context, '/player');
             },
           ),
         ],
@@ -322,7 +318,6 @@ void _showLogoutConfirmationDialog(BuildContext context) {
   );
 }
 
-
   Widget _buildStatusSection() {
     return Container(
       width: double.infinity,
@@ -396,72 +391,99 @@ void _showLogoutConfirmationDialog(BuildContext context) {
 
 Widget _buildTaskItem(Map<String, dynamic> task) {
   // Extract relevant fields from the task
-  String taskId = task['id']; // Extract task ID
+  String taskId = task['id'];
   String taskName = task['taskName'] ?? 'Unnamed Task';
   String taskDescription = task['description'] ?? 'No description available';
   String taskStatus = task['status'] ?? 'Pending'; // Default to 'Pending' if status is null
   String? videoUrl = task['videoUrl']; // Video URL if available
-  
-  Color statusColor;
-  switch (taskStatus) {
-    case 'Completed':
-      statusColor = Colors.green;
-      break;
-    case 'In Progress':
-      statusColor = Colors.orange;
-      break;
-    case 'Pending':
-      statusColor = Colors.blue;
-      break;
-    case 'Video Attached':
-      statusColor = Colors.purple; // New status color for video attached
-      break;
-    default:
-      statusColor = Colors.red; // For unrecognized statuses
-  }
 
-  return Card(
-    color: whiteColor,
-    elevation: 4,
+  // Determine the color based on the task status with a cleaner approach
+  Color statusColor = _getStatusColor(taskStatus);
+
+  return Container(
     margin: const EdgeInsets.symmetric(vertical: 8.0),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12.0),
+      boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 4.0)],
+    ),
     child: Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            taskName,
-            style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  taskName,
+                  style: GoogleFonts.montserrat(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  // Status indicator based on task status
+                  Container(
+                    padding: const EdgeInsets.all(4.0),
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      borderRadius: BorderRadius.circular(4.0),
+                    ),
+                    child: Text(
+                      taskStatus,
+                      style: const TextStyle(fontSize: 12.0, color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 8.0),
+                  if (videoUrl != null && videoUrl.isNotEmpty)
+                    Icon(
+                      Icons.attach_file,
+                      color: statusColor,
+                      size: 16.0,
+                    ),
+                ],
+              ),
+            ],
           ),
           const SizedBox(height: 8.0),
           Text(
             taskDescription,
             style: GoogleFonts.montserrat(fontSize: 14),
           ),
-          const SizedBox(height: 8.0),
-          if (videoUrl != null && videoUrl.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Text(
-                'Video Attached',
-                style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold),
-              ),
-            ),
-          const SizedBox(height: 8.0),
+          const SizedBox(height: 16.0),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              ElevatedButton(
-                onPressed: () {
-                  _pickVideo(taskId); // Allow video selection
-                },
-                child: const Text('Upload Video'),
-              ),
-              ElevatedButton(
+              Visibility(
+                visible: taskStatus != 'Done',
+                child: ElevatedButton.icon(
                   onPressed: () {
-                    // Check if either mobile or web video has been selected
-                       print('Web video: $_selectedWebVideo');
-                    if ( _selectedWebVideo != null) {
+                    _pickVideo(taskId); // Allow video selection
+                    _updateTaskStatus(taskId, 'In Progress'); // Update status to "In Progress"
+                  },
+                  icon: const Icon(Icons.upload, size: 16.0),
+                  label: const Text('Upload Video', style: TextStyle(fontSize: 12.0)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white, // Set button background to white
+                    foregroundColor: statusColor, // Use status color for text
+                    minimumSize: const Size(120, 40),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      side: BorderSide(color: statusColor),
+                    ),
+                  ),
+                ),
+              ),
+              Visibility(
+                visible: taskStatus != 'Done',
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    // Check if a video has been selected
+                    if (_selectedWebVideo != null || _selectedMobileVideo != null) {
                       _showConfirmationDialog(taskId); // Show confirmation for submission
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -469,22 +491,41 @@ Widget _buildTaskItem(Map<String, dynamic> task) {
                       );
                     }
                   },
-                  child: const Text('Submit Task'),
+                  icon: const Icon(Icons.send, size: 16.0),
+                  label: const Text('Submit Task', style: TextStyle(fontSize: 12.0)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: statusColor,
+                    minimumSize: const Size(120, 40),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      side: BorderSide(color: statusColor),
+                    ),
+                  ),
                 ),
-
+              ),
             ],
-          ),
-          const SizedBox(height: 8.0),
-          Text(
-            taskStatus,
-            style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
           ),
         ],
       ),
     ),
   );
 }
-
+// Helper function to get status color
+Color _getStatusColor(String status) {
+  switch (status) {
+    case 'Completed':
+      return Colors.green;
+    case 'In Progress':
+      return Colors.orange;
+    case 'Pending':
+      return Colors.blue;
+    case 'Video Attached':
+      return Colors.purple;
+    default:
+      return Colors.green;
+  }
+}
 
   Widget _buildStatusContainer(String value, String label) {
     return Container(

@@ -180,6 +180,36 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
     );
   }
 
+void _showLogoutConfirmationDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () {
+              // Close the dialog without logging out
+              Navigator.of(context).pop();
+            },
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              // Proceed with logout
+              FirebaseAuth.instance.signOut();
+              Navigator.of(context).pop(); // Close the dialog
+              Navigator.pushReplacementNamed(context, '/login'); // Navigate to login
+            },
+            child: const Text('Logout'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
@@ -198,12 +228,9 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
               ),
             ),
             GestureDetector(
-              onTap: () async {
-                await FirebaseAuth.instance.signOut();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginPageWidget()),
-                );
+              onTap: () {
+                // Show the logout confirmation dialog
+                _showLogoutConfirmationDialog(context);
               },
               child: Text(
                 'Logout',
