@@ -215,7 +215,7 @@ Future<void> _showConfirmationDialog(String taskId) async {
               Navigator.of(context).pop(); // Close the dialog
               await _uploadVideo(taskId); // Upload the video
               await _updateTaskStatus(taskId, 'Done'); // Update task status to "Done"
-              Navigator.pushReplacementNamed(context, '/player');
+              setState(() {});
             },
           ),
         ],
@@ -318,80 +318,81 @@ void _showLogoutConfirmationDialog(BuildContext context) {
   );
 }
 
-  Widget _buildStatusSection() {
-    return Container(
-      width: double.infinity,
-      color: backgroundColor,
-      child: Padding(
-        padding: const EdgeInsetsDirectional.fromSTEB(8.5, 0, 8.5, 0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Align(
-              alignment: const AlignmentDirectional(-1, 0),
-              child: Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(10, 10, 0, 10),
-                child: Text(
-                  'My Status',
-                  style: GoogleFonts.montserrat(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildStatusContainer('90%', 'Speed'),
-                _buildStatusContainer('85%', 'Strength'),
-                _buildStatusContainer('80%', 'Endurance'),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildTasksSection() {
-    return Expanded(
-      child: Container(
-        width: double.infinity,
-        color: backgroundColor,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Tasks',
+Widget _buildStatusSection() {
+  return Container(
+    width: double.infinity,
+    color: backgroundColor,
+    child: Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(8.5, 0, 8.5, 0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Align(
+            alignment: const AlignmentDirectional(-1, 0),
+            child: Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(10, 10, 0, 10),
+              child: Text(
+                'My Status',
                 style: GoogleFonts.montserrat(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 8.0),
-              tasks.isNotEmpty
-                  ? ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: tasks.length,
-                      itemBuilder: (context, index) {
-                        return _buildTaskItem(tasks[index]);
-                      },
-                    )
-                  : const Center(child: Text('No tasks assigned.')),
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildStatusContainer('90%', 'Speed'),
+              _buildStatusContainer('85%', 'Strength'),
+              _buildStatusContainer('80%', 'Endurance'),
             ],
           ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _buildTasksSection() {
+  return Expanded(
+    child: Container(
+      width: double.infinity,
+      color: backgroundColor,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Tasks',
+              style: GoogleFonts.montserrat(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8.0),
+            tasks.isNotEmpty
+                ? ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: tasks.length,
+                    itemBuilder: (context, index) {
+                      return _buildTaskItem(tasks[index]); // Use the correct method to build task items
+                    },
+                  )
+                : const Center(child: Text('No tasks assigned.')),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
 Widget _buildTaskItem(Map<String, dynamic> task) {
   // Extract relevant fields from the task
-  String taskId = task['id'];
+  String taskId = task['id']; // Extract task ID
   String taskName = task['taskName'] ?? 'Unnamed Task';
   String taskDescription = task['description'] ?? 'No description available';
   String taskStatus = task['status'] ?? 'Pending'; // Default to 'Pending' if status is null
@@ -511,6 +512,129 @@ Widget _buildTaskItem(Map<String, dynamic> task) {
     ),
   );
 }
+
+// Widget _buildTaskItem(Map<String, dynamic> task) {
+//   // Extract relevant fields from the task
+//   String taskId = task['id'];
+//   String taskName = task['taskName'] ?? 'Unnamed Task';
+//   String taskDescription = task['description'] ?? 'No description available';
+//   String taskStatus = task['status'] ?? 'Pending'; // Default to 'Pending' if status is null
+//   String? videoUrl = task['videoUrl']; // Video URL if available
+
+//   // Determine the color based on the task status with a cleaner approach
+//   Color statusColor = _getStatusColor(taskStatus);
+
+//   return Container(
+//     margin: const EdgeInsets.symmetric(vertical: 8.0),
+//     decoration: BoxDecoration(
+//       color: Colors.white,
+//       borderRadius: BorderRadius.circular(12.0),
+//       boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 4.0)],
+//     ),
+//     child: Padding(
+//       padding: const EdgeInsets.all(16.0),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           Row(
+//             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//             children: [
+//               Expanded(
+//                 child: Text(
+//                   taskName,
+//                   style: GoogleFonts.montserrat(
+//                     fontWeight: FontWeight.bold,
+//                     fontSize: 16,
+//                   ),
+//                 ),
+//               ),
+//               Row(
+//                 children: [
+//                   // Status indicator based on task status
+//                   Container(
+//                     padding: const EdgeInsets.all(4.0),
+//                     decoration: BoxDecoration(
+//                       color: statusColor,
+//                       borderRadius: BorderRadius.circular(4.0),
+//                     ),
+//                     child: Text(
+//                       taskStatus,
+//                       style: const TextStyle(fontSize: 12.0, color: Colors.white),
+//                     ),
+//                   ),
+//                   const SizedBox(width: 8.0),
+//                   if (videoUrl != null && videoUrl.isNotEmpty)
+//                     Icon(
+//                       Icons.attach_file,
+//                       color: statusColor,
+//                       size: 16.0,
+//                     ),
+//                 ],
+//               ),
+//             ],
+//           ),
+//           const SizedBox(height: 8.0),
+//           Text(
+//             taskDescription,
+//             style: GoogleFonts.montserrat(fontSize: 14),
+//           ),
+//           const SizedBox(height: 16.0),
+//           Row(
+//             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+//             children: [
+//               Visibility(
+//                 visible: taskStatus != 'Done',
+//                 child: ElevatedButton.icon(
+//                   onPressed: () {
+//                     _pickVideo(taskId); // Allow video selection
+//                     _updateTaskStatus(taskId, 'In Progress'); // Update status to "In Progress"
+//                   },
+//                   icon: const Icon(Icons.upload, size: 16.0),
+//                   label: const Text('Upload Video', style: TextStyle(fontSize: 12.0)),
+//                   style: ElevatedButton.styleFrom(
+//                     backgroundColor: Colors.white, // Set button background to white
+//                     foregroundColor: statusColor, // Use status color for text
+//                     minimumSize: const Size(120, 40),
+//                     shape: RoundedRectangleBorder(
+//                       borderRadius: BorderRadius.circular(8.0),
+//                       side: BorderSide(color: statusColor),
+//                     ),
+//                   ),
+//                 ),
+//               ),
+//               Visibility(
+//                 visible: taskStatus != 'Done',
+//                 child: ElevatedButton.icon(
+//                   onPressed: () {
+//                     // Check if a video has been selected
+//                     if (_selectedWebVideo != null || _selectedMobileVideo != null) {
+//                       _showConfirmationDialog(taskId); // Show confirmation for submission
+//                     } else {
+//                       ScaffoldMessenger.of(context).showSnackBar(
+//                         const SnackBar(content: Text('Please upload a video first.')),
+//                       );
+//                     }
+//                   },
+//                   icon: const Icon(Icons.send, size: 16.0),
+//                   label: const Text('Submit Task', style: TextStyle(fontSize: 12.0)),
+//                   style: ElevatedButton.styleFrom(
+//                     backgroundColor: Colors.white,
+//                     foregroundColor: statusColor,
+//                     minimumSize: const Size(120, 40),
+//                     shape: RoundedRectangleBorder(
+//                       borderRadius: BorderRadius.circular(8.0),
+//                       side: BorderSide(color: statusColor),
+//                     ),
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ],
+//       ),
+//     ),
+//   );
+// }
 // Helper function to get status color
 Color _getStatusColor(String status) {
   switch (status) {
