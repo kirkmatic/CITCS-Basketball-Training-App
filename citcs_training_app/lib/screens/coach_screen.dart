@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Ensure you have this import for the login screen
 
 class CoachesPageWidget extends StatefulWidget {
   const CoachesPageWidget({super.key});
@@ -15,7 +15,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
   String coachName = "Loading...";
   List<Map<String, dynamic>> users = [];
   final TextEditingController textController = TextEditingController();
-  bool isLoading = true;
+  bool isLoading = true; // Add loading state
 
   @override
   void initState() {
@@ -46,10 +46,11 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
 
   Future<void> _fetchUsersData() async {
     setState(() {
-      isLoading = true;
+      isLoading = true; // Start loading
     });
 
     try {
+      // Fetch only users with the role of 'Player'
       QuerySnapshot userDocs = await FirebaseFirestore.instance.collection('users')
           .where('role', isEqualTo: 'Player')
           .get();
@@ -59,12 +60,12 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
           'student_number': doc['studentNumber'],
           'id': doc.id,
         }).toList();
-        isLoading = false;
+        isLoading = false; // Stop loading
       });
     } catch (e) {
       print('Error fetching users: $e');
       setState(() {
-        isLoading = false;
+        isLoading = false; // Stop loading even on error
       });
     }
   }
@@ -72,7 +73,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
   Future<void> _searchUsers(String query) async {
     try {
       QuerySnapshot searchResults = await FirebaseFirestore.instance.collection('users')
-          .where('role', isEqualTo: 'Player')
+          .where('role', isEqualTo: 'Player')  // Only players in the search
           .where('name', isGreaterThanOrEqualTo: query)
           .where('name', isLessThanOrEqualTo: '$query\uf8ff')
           .get();
@@ -94,7 +95,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
       await FirebaseFirestore.instance.collection('users').doc(playerId).collection('tasks').add({
         'taskName': taskName,
         'description': description,
-        'status': 'Pending',
+        'status': 'Pending', // Default status when assigning a new task
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Task assigned successfully')),
@@ -108,6 +109,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
   }
 
   Future<void> _viewTasks(String playerId, String playerName) async {
+    // Fetch the tasks assigned to the player
     List<Map<String, dynamic>> tasks = [];
     try {
       QuerySnapshot taskDocs = await FirebaseFirestore.instance.collection('users')
@@ -116,12 +118,13 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
         'taskName': doc['taskName'],
         'description': doc['description'],
         'status': doc['status'],
-        'videoUrl': doc['videoUrl']
+        'videoUrl' : doc['videoUrl']
       }).toList();
     } catch (e) {
       print('Error fetching tasks: $e');
     }
 
+    // Show the tasks in a dialog
     showDialog(
       context: context,
       builder: (context) {
@@ -135,6 +138,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
                   : tasks.map((task) {
                       return ListTile(
                         title: Text(task['taskName']),
+                        subtitle: Text('Description: ${task['description']}\nStatus: ${task['status']}'),
                       );
                     }).toList(),
             ),
@@ -175,39 +179,41 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
     );
   }
 
-  void _showLogoutConfirmationDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirm Logout'),
-          content: const Text('Are you sure you want to log out?'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                FirebaseAuth.instance.signOut();
-                Navigator.of(context).pop();
-                Navigator.pushReplacementNamed(context, '/login');
-              },
-              child: const Text('Logout'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+void _showLogoutConfirmationDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () {
+              // Close the dialog without logging out
+              Navigator.of(context).pop();
+            },
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              // Proceed with logout
+              FirebaseAuth.instance.signOut();
+              Navigator.of(context).pop(); // Close the dialog
+              Navigator.pushReplacementNamed(context, '/login'); // Navigate to login
+            },
+            child: const Text('Logout'),
+          ),
+        ],
+      );
+    },
+  );
+}
 
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
       height: 60,
-      color: const Color(0xFF450100),
+      color: const Color(0xFF450100),  // Updated color
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 9),
         child: Row(
@@ -222,6 +228,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
             ),
             GestureDetector(
               onTap: () {
+                // Show the logout confirmation dialog
                 _showLogoutConfirmationDialog(context);
               },
               child: Text(
@@ -263,9 +270,9 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
               _searchUsers(textController.text.trim());
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF450100),
+              backgroundColor: const Color(0xFF450100),  // Updated button color
             ),
-            child: const Text(
+            child: const Text(  // Changed to a text instead of an icon
               'Search',
               style: TextStyle(color: Colors.white),
             ),
@@ -277,11 +284,11 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
 
   Widget _buildUsersTable() {
     if (isLoading) {
-      return Center(child: CircularProgressIndicator());
+      return Center(child: CircularProgressIndicator()); // Show loading spinner
     }
 
     if (users.isEmpty) {
-      return Center(child: Text('No players found.'));
+      return Center(child: Text('No players found.')); // Show message when no users are found
     }
 
     return Padding(
@@ -290,7 +297,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
         border: TableBorder.all(),
         children: [
           TableRow(
-            decoration: const BoxDecoration(color: Color(0xFF450100)),
+            decoration: const BoxDecoration(color: Color(0xFF450100)),  // Updated color for the table header
             children: [
               _buildTableCell('Player Name', true),
               _buildTableCell('Student Number', true),
@@ -302,7 +309,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
               children: [
                 _buildTableCell(user['name'] ?? 'N/A', false),
                 _buildTableCell(user['student_number'] ?? 'N/A', false),
-                _buildActionsCell(user['id']),
+                _buildActionsCell(user),
               ],
             );
           }).toList(),
@@ -314,67 +321,69 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
   Widget _buildTableCell(String text, bool isHeader) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
-          color: isHeader ? Colors.white : Colors.black,
+      child: Center(  // Centering the content
+        child: Text(
+          text,
+          style: GoogleFonts.montserrat(
+            fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
+            color: isHeader ? Colors.white : Colors.black,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildActionsCell(String playerId) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        ElevatedButton(
-          onPressed: () {
-            _showAssignTaskDialog(playerId);
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF450100),
-          ),
-          child: const Text(
-            'Assign Task',
-            style: TextStyle(color: Colors.white),
-          ),
+  Widget _buildActionsCell(Map<String, dynamic> user) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Center(  // Centering the icons and buttons
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,  // Centering the icons within the row
+          children: [
+            IconButton(
+              icon: Icon(Icons.bar_chart, color: Colors.blue[800]),
+              onPressed: () {
+                _showStatsDialog(user['name']);
+              },
+            ),
+            const SizedBox(width: 5),
+            IconButton(
+              icon: Icon(Icons.assignment, color: Colors.red[800]),
+              onPressed: () {
+                _showAssignTaskDialog(user['id'], user['name']);
+              },
+            ),
+            const SizedBox(width: 5),
+            IconButton(
+              icon: Icon(Icons.task, color: Colors.green[800]),
+              onPressed: () {
+                _viewTasks(user['id'], user['name']);
+              },
+            ),
+          ],
         ),
-        ElevatedButton(
-          onPressed: () {
-            _viewTasks(playerId, users.firstWhere((user) => user['id'] == playerId)['name']);
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF450100),
-          ),
-          child: const Text(
-            'View Tasks',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  void _showAssignTaskDialog(String playerId) {
-    final TextEditingController taskNameController = TextEditingController();
-    final TextEditingController descriptionController = TextEditingController();
-
+  void _showAssignTaskDialog(String playerId, String playerName) {
+    TextEditingController taskNameController = TextEditingController();
+    TextEditingController descriptionController = TextEditingController();
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (context) {
         return AlertDialog(
-          title: Text('Assign Task'),
+          title: Text('Assign Task to $playerName'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: taskNameController,
-                decoration: InputDecoration(hintText: 'Task Name'),
+                decoration: InputDecoration(hintText: 'Enter task name'),
               ),
               TextField(
                 controller: descriptionController,
-                decoration: InputDecoration(hintText: 'Description'),
+                decoration: InputDecoration(hintText: 'Enter task description'),
               ),
             ],
           ),
@@ -391,6 +400,26 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
                 Navigator.of(context).pop();
               },
               child: Text('Assign'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showStatsDialog(String playerName) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Stats for $playerName'),
+          content: Text('Player stats will be shown here.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Close'),
             ),
           ],
         );
