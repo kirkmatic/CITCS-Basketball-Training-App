@@ -71,76 +71,87 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
   }
 
 Future<void> _viewTasks(String playerId, String playerName) async {
-    List<Map<String, dynamic>> tasks = [];
-    try {
-      QuerySnapshot taskDocs = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(playerId)
-          .collection('tasks')
-          .get();
-      tasks = taskDocs.docs.map((doc) => {
-        'taskName': doc['taskName'],
-        'description': doc['description'],
-        'status': doc['status'],
-        'videoUrl': doc['videoUrl']
-      }).toList();
-    } catch (e) {
-      print('Error fetching tasks: $e');
-    }
-
-    // Show the tasks in a dialog
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Tasks for $playerName'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView(
-              children: tasks.isEmpty
-                  ? [Text('No tasks assigned')]
-                  : tasks.map((task) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  task['taskName'],
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16),
-                                ),
-                                const SizedBox(height: 4),
-                                Text('Description: ${task['description']}'),
-                                Text('Status: ${task['status']}'),
-                                const SizedBox(height: 8),
-                                if (task['videoUrl'] != null &&
-                                    task['videoUrl'].isNotEmpty)
-                                  VideoPlayerWidget(videoUrl: task['videoUrl']),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
+  List<Map<String, dynamic>> tasks = [];
+  try {
+    QuerySnapshot taskDocs = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(playerId)
+        .collection('tasks')
+        .get();
+    tasks = taskDocs.docs.map((doc) => {
+      'taskName': doc['taskName'],
+      'description': doc['description'],
+      'status': doc['status'],
+      'videoUrl': doc['videoUrl'],
+      'id': doc.id // Store the document ID for deletion
+    }).toList();
+  } catch (e) {
+    print('Error fetching tasks: $e');
   }
+
+  // Show the tasks in a dialog
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text('Tasks for $playerName'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView(
+            children: tasks.isEmpty
+                ? [Text('No tasks assigned')]
+                : tasks.map((task) {
+                    return ListTile(
+                      title: Text(task['taskName']),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Description: ${task['description']}'),
+                          Text('Status: ${task['status']}'),
+                          if (task['videoUrl'] != null && task['videoUrl'].isNotEmpty)
+                            VideoPlayerWidget(videoUrl: task['videoUrl']),
+                        ],
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () {
+                          _removeTask(playerId, task['id'], playerName); // Pass playerName here
+                        },
+                      ),
+                    );
+                  }).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: Text('Close'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+
+Future<void> _removeTask(String playerId, String taskId, String playerName) async {
+  try {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(playerId)
+        .collection('tasks')
+        .doc(taskId)
+        .delete(); // Delete the task document
+    print('Task removed successfully.');
+    
+    // Optionally, you can call _viewTasks again if you want to refresh the list
+    _viewTasks(playerId, playerName); // Refresh tasks after deletion
+  } catch (e) {
+    print('Error removing task: $e');
+  }
+}
 
   @override
   Widget build(BuildContext context) {
