@@ -383,7 +383,8 @@ Future<void> _viewTasks(String playerId, String playerName) async {
   }
 }
 
-// Video Player Widget
+
+// Video Player Display Widget
 class VideoPlayerWidget extends StatefulWidget {
   final String videoUrl;
 
@@ -395,6 +396,7 @@ class VideoPlayerWidget extends StatefulWidget {
 
 class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   late VideoPlayerController _controller;
+  bool _isPlaying = false; // Track play/pause state
 
   @override
   void initState() {
@@ -411,12 +413,38 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     super.dispose();
   }
 
+  void _togglePlayback() {
+    setState(() {
+      if (_isPlaying) {
+        _controller.pause();
+      } else {
+        _controller.play();
+      }
+      _isPlaying = !_isPlaying; // Toggle play state
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return _controller.value.isInitialized
-        ? AspectRatio(
-            aspectRatio: _controller.value.aspectRatio,
-            child: VideoPlayer(_controller),
+        ? GestureDetector(
+            onTap: _togglePlayback, // Play/Pause on tap
+            child: AspectRatio(
+              aspectRatio: _controller.value.aspectRatio,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  VideoPlayer(_controller),
+                  _isPlaying
+                      ? Container() // Empty container when playing
+                      : Icon(
+                          Icons.play_circle_fill,
+                          color: Colors.white,
+                          size: 64.0, // Adjust size as needed
+                        ), // Show play icon when paused
+                ],
+              ),
+            ),
           )
         : Container(); // Show an empty container until the video is initialized
   }
