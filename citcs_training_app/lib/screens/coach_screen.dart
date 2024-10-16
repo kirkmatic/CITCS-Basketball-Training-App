@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Ensure you have this import for the login screen
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:video_player/video_player.dart'; // Import the video player package
 
 class CoachesPageWidget extends StatefulWidget {
   const CoachesPageWidget({super.key});
@@ -15,7 +16,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
   String coachName = "Loading...";
   List<Map<String, dynamic>> users = [];
   final TextEditingController textController = TextEditingController();
-  bool isLoading = true; // Add loading state
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -46,11 +47,10 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
 
   Future<void> _fetchUsersData() async {
     setState(() {
-      isLoading = true; // Start loading
+      isLoading = true;
     });
 
     try {
-      // Fetch only users with the role of 'Player'
       QuerySnapshot userDocs = await FirebaseFirestore.instance.collection('users')
           .where('role', isEqualTo: 'Player')
           .get();
@@ -60,65 +60,29 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
           'student_number': doc['studentNumber'],
           'id': doc.id,
         }).toList();
-        isLoading = false; // Stop loading
+        isLoading = false;
       });
     } catch (e) {
       print('Error fetching users: $e');
       setState(() {
-        isLoading = false; // Stop loading even on error
+        isLoading = false;
       });
     }
   }
 
-  Future<void> _searchUsers(String query) async {
-    try {
-      QuerySnapshot searchResults = await FirebaseFirestore.instance.collection('users')
-          .where('role', isEqualTo: 'Player')  // Only players in the search
-          .where('name', isGreaterThanOrEqualTo: query)
-          .where('name', isLessThanOrEqualTo: '$query\uf8ff')
-          .get();
-
-      setState(() {
-        users = searchResults.docs.map((doc) => {
-          'name': doc['name'],
-          'student_number': doc['studentNumber'],
-          'id': doc.id,
-        }).toList();
-      });
-    } catch (e) {
-      print('Error searching users: $e');
-    }
-  }
-
-  Future<void> _assignTask(String playerId, String taskName, String description) async {
-    try {
-      await FirebaseFirestore.instance.collection('users').doc(playerId).collection('tasks').add({
-        'taskName': taskName,
-        'description': description,
-        'status': 'Pending', // Default status when assigning a new task
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Task assigned successfully')),
-      );
-    } catch (e) {
-      print('Error assigning task: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to assign task')),
-      );
-    }
-  }
-
-  Future<void> _viewTasks(String playerId, String playerName) async {
-    // Fetch the tasks assigned to the player
+Future<void> _viewTasks(String playerId, String playerName) async {
     List<Map<String, dynamic>> tasks = [];
     try {
-      QuerySnapshot taskDocs = await FirebaseFirestore.instance.collection('users')
-          .doc(playerId).collection('tasks').get();
+      QuerySnapshot taskDocs = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(playerId)
+          .collection('tasks')
+          .get();
       tasks = taskDocs.docs.map((doc) => {
         'taskName': doc['taskName'],
         'description': doc['description'],
         'status': doc['status'],
-        'videoUrl' : doc['videoUrl']
+        'videoUrl': doc['videoUrl']
       }).toList();
     } catch (e) {
       print('Error fetching tasks: $e');
@@ -136,9 +100,31 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
               children: tasks.isEmpty
                   ? [Text('No tasks assigned')]
                   : tasks.map((task) {
-                      return ListTile(
-                        title: Text(task['taskName']),
-                        subtitle: Text('Description: ${task['description']}\nStatus: ${task['status']}'),
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  task['taskName'],
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16),
+                                ),
+                                const SizedBox(height: 4),
+                                Text('Description: ${task['description']}'),
+                                Text('Status: ${task['status']}'),
+                                const SizedBox(height: 8),
+                                if (task['videoUrl'] != null &&
+                                    task['videoUrl'].isNotEmpty)
+                                  VideoPlayerWidget(videoUrl: task['videoUrl']),
+                              ],
+                            ),
+                          ),
+                        ),
                       );
                     }).toList(),
             ),
@@ -179,7 +165,7 @@ class _CoachesPageWidgetState extends State<CoachesPageWidget> {
     );
   }
 
-void _showLogoutConfirmationDialog(BuildContext context) {
+  void _showLogoutConfirmationDialog(BuildContext context) {
   showDialog(
     context: context,
     builder: (BuildContext context) {
@@ -189,17 +175,15 @@ void _showLogoutConfirmationDialog(BuildContext context) {
         actions: <Widget>[
           TextButton(
             onPressed: () {
-              // Close the dialog without logging out
               Navigator.of(context).pop();
             },
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              // Proceed with logout
-              FirebaseAuth.instance.signOut();
-              Navigator.of(context).pop(); // Close the dialog
-              Navigator.pushReplacementNamed(context, '/login'); // Navigate to login
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              Navigator.of(context).pop();
+              Navigator.pushReplacementNamed(context, '/login');
             },
             child: const Text('Logout'),
           ),
@@ -213,7 +197,7 @@ void _showLogoutConfirmationDialog(BuildContext context) {
     return Container(
       width: double.infinity,
       height: 60,
-      color: const Color(0xFF450100),  // Updated color
+      color: const Color(0xFF450100),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 9),
         child: Row(
@@ -228,7 +212,6 @@ void _showLogoutConfirmationDialog(BuildContext context) {
             ),
             GestureDetector(
               onTap: () {
-                // Show the logout confirmation dialog
                 _showLogoutConfirmationDialog(context);
               },
               child: Text(
@@ -262,6 +245,9 @@ void _showLogoutConfirmationDialog(BuildContext context) {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
+              onChanged: (query) {
+                _searchUsers(query); // Call search on text change
+              },
             ),
           ),
           const SizedBox(width: 10),
@@ -272,7 +258,7 @@ void _showLogoutConfirmationDialog(BuildContext context) {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF450100),  // Updated button color
             ),
-            child: const Text(  // Changed to a text instead of an icon
+            child: const Text(
               'Search',
               style: TextStyle(color: Colors.white),
             ),
@@ -282,108 +268,90 @@ void _showLogoutConfirmationDialog(BuildContext context) {
     );
   }
 
+  Future<void> _searchUsers(String query) async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      QuerySnapshot userDocs = await FirebaseFirestore.instance.collection('users')
+          .where('role', isEqualTo: 'Player')
+          .where('name', isGreaterThanOrEqualTo: query)
+          .where('name', isLessThanOrEqualTo: query + '\uf8ff') // Ensures that all names starting with the query are returned
+          .get();
+
+      setState(() {
+        users = userDocs.docs.map((doc) => {
+          'name': doc['name'],
+          'student_number': doc['studentNumber'],
+          'id': doc.id,
+        }).toList();
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error searching users: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
   Widget _buildUsersTable() {
-    if (isLoading) {
-      return Center(child: CircularProgressIndicator()); // Show loading spinner
-    }
-
-    if (users.isEmpty) {
-      return Center(child: Text('No players found.')); // Show message when no users are found
-    }
-
-    return Padding(
-      padding: const EdgeInsets.all(10),
-      child: Table(
-        border: TableBorder.all(),
-        children: [
-          TableRow(
-            decoration: const BoxDecoration(color: Color(0xFF450100)),  // Updated color for the table header
-            children: [
-              _buildTableCell('Player Name', true),
-              _buildTableCell('Student Number', true),
-              _buildTableCell('Actions', true),
+    return isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : DataTable(
+            columns: const [
+              DataColumn(label: Text('Name')),
+              DataColumn(label: Text('Student Number')),
+              DataColumn(label: Text('Actions')),
             ],
-          ),
-          ...users.map((user) {
-            return TableRow(
-              children: [
-                _buildTableCell(user['name'] ?? 'N/A', false),
-                _buildTableCell(user['student_number'] ?? 'N/A', false),
-                _buildActionsCell(user),
-              ],
-            );
-          }).toList(),
-        ],
-      ),
-    );
+            rows: users.map((user) {
+              return DataRow(cells: [
+                DataCell(Text(user['name'])),
+                DataCell(Text(user['student_number'])),
+                DataCell(
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.task),
+                        onPressed: () {
+                          _assignTaskDialog(user['id']);
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.remove_red_eye),
+                        onPressed: () {
+                          _viewTasks(user['id'], user['name']);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ]);
+            }).toList(),
+          );
   }
 
-  Widget _buildTableCell(String text, bool isHeader) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Center(  // Centering the content
-        child: Text(
-          text,
-          style: GoogleFonts.montserrat(
-            fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
-            color: isHeader ? Colors.white : Colors.black,
-          ),
-        ),
-      ),
-    );
-  }
+  Future<void> _assignTaskDialog(String playerId) async {
+    final TextEditingController taskNameController = TextEditingController();
+    final TextEditingController descriptionController = TextEditingController();
 
-  Widget _buildActionsCell(Map<String, dynamic> user) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Center(  // Centering the icons and buttons
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,  // Centering the icons within the row
-          children: [
-            IconButton(
-              icon: Icon(Icons.bar_chart, color: Colors.blue[800]),
-              onPressed: () {
-                _showStatsDialog(user['name']);
-              },
-            ),
-            const SizedBox(width: 5),
-            IconButton(
-              icon: Icon(Icons.assignment, color: Colors.red[800]),
-              onPressed: () {
-                _showAssignTaskDialog(user['id'], user['name']);
-              },
-            ),
-            const SizedBox(width: 5),
-            IconButton(
-              icon: Icon(Icons.task, color: Colors.green[800]),
-              onPressed: () {
-                _viewTasks(user['id'], user['name']);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showAssignTaskDialog(String playerId, String playerName) {
-    TextEditingController taskNameController = TextEditingController();
-    TextEditingController descriptionController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Assign Task to $playerName'),
+          title: const Text('Assign Task'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: taskNameController,
-                decoration: InputDecoration(hintText: 'Enter task name'),
+                decoration: const InputDecoration(hintText: 'Task Name'),
               ),
               TextField(
                 controller: descriptionController,
-                decoration: InputDecoration(hintText: 'Enter task description'),
+                decoration: const InputDecoration(hintText: 'Description'),
               ),
             ],
           ),
@@ -392,38 +360,64 @@ void _showLogoutConfirmationDialog(BuildContext context) {
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
-                _assignTask(playerId, taskNameController.text.trim(), descriptionController.text.trim());
+              onPressed: () async {
+                // Add your Firestore logic to assign the task
+                await FirebaseFirestore.instance.collection('users').doc(playerId).collection('tasks').add({
+                  'taskName': taskNameController.text,
+                  'description': descriptionController.text,
+                  'status': 'Assigned', // Default status
+                  'videoUrl': '' // Add the video URL if needed
+                });
                 Navigator.of(context).pop();
+                _fetchUsersData(); // Refresh the user list
               },
-              child: Text('Assign'),
+              child: const Text('Assign'),
             ),
           ],
         );
       },
     );
   }
+}
 
-  void _showStatsDialog(String playerName) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Stats for $playerName'),
-          content: Text('Player stats will be shown here.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
+// Video Player Widget
+class VideoPlayerWidget extends StatefulWidget {
+  final String videoUrl;
+
+  const VideoPlayerWidget({Key? key, required this.videoUrl}) : super(key: key);
+
+  @override
+  _VideoPlayerWidgetState createState() => _VideoPlayerWidgetState();
+}
+
+class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
+  late VideoPlayerController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
+      ..initialize().then((_) {
+        setState(() {}); // Update the UI when the controller is initialized
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose(); // Dispose of the controller
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _controller.value.isInitialized
+        ? AspectRatio(
+            aspectRatio: _controller.value.aspectRatio,
+            child: VideoPlayer(_controller),
+          )
+        : Container(); // Show an empty container until the video is initialized
   }
 }

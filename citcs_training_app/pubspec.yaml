@@ -20,6 +20,7 @@ dependencies:
   provider: ^6.0.5
   image_picker: ^1.0.0+5  # Added Image Picker for selecting videos
   file_picker: ^5.0.0
+  video_player: ^2.4.5
 
 dev_dependencies:
   flutter_test:
