@@ -23,6 +23,10 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
   File? _selectedMobileVideo; // For mobile file handling
   Uint8List? _selectedWebVideo; // For web handling
 
+  int speed = 100;
+  int strength = 100;
+  int endurance = 100;
+
   static const Color primaryColor = Color(0xFF450100);
   static const Color backgroundColor = Color(0xFFE5E5E5);
   static const Color whiteColor = Colors.white;
@@ -31,6 +35,7 @@ class _PlayersPageWidgetState extends State<PlayersPageWidget> {
   void initState() {
     super.initState();
     _fetchPlayerName();
+    _fetchPlayerStats(); // Fetch stats on initialization
     _fetchPlayerTasks(); // Fetch tasks on initialization
   }
 
@@ -51,6 +56,26 @@ Future<void> _fetchPlayerName() async {
       }
     } catch (e) {
       print('Error fetching player name: $e');
+    }
+  }
+
+Future<void> _fetchPlayerStats() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final statsDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('stats')
+          .doc('statsId') // Change to the correct document ID or fetch dynamically
+          .get();
+
+      if (statsDoc.exists) {
+        setState(() {
+          speed = statsDoc['speed'] ?? 100;
+          strength = statsDoc['strength'] ?? 100;
+          endurance = statsDoc['endurance'] ?? 100;
+        });
+      }
     }
   }
 
@@ -335,41 +360,41 @@ void _showLogoutConfirmationDialog(BuildContext context) {
 
 
 Widget _buildStatusSection() {
-  return Container(
-    width: double.infinity,
-    color: backgroundColor,
-    child: Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(8.5, 0, 8.5, 0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Align(
-            alignment: const AlignmentDirectional(-1, 0),
-            child: Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(10, 10, 0, 10),
-              child: Text(
-                'My Status',
-                style: GoogleFonts.montserrat(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+    return Container(
+      width: double.infinity,
+      color: backgroundColor,
+      child: Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(8.5, 0, 8.5, 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Align(
+              alignment: const AlignmentDirectional(-1, 0),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(10, 10, 0, 10),
+                child: Text(
+                  'My Status',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildStatusContainer('90%', 'Speed'),
-              _buildStatusContainer('85%', 'Strength'),
-              _buildStatusContainer('80%', 'Endurance'),
-            ],
-          ),
-        ],
+            Row(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildStatusContainer('$speed%', 'Speed'),
+                _buildStatusContainer('$strength%', 'Strength'),
+                _buildStatusContainer('$endurance%', 'Endurance'),
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
 Widget _buildTasksSection() {
   return Expanded(
@@ -405,7 +430,7 @@ Widget _buildTasksSection() {
   );
 }
 
-  Widget _buildTaskItem(Map<String, dynamic> task) {
+Widget _buildTaskItem(Map<String, dynamic> task) {
   // Extract relevant fields from the task
   String taskId = task['id']; // Extract task ID
   String taskName = task['taskName'] ?? 'Unnamed Task';
@@ -542,6 +567,7 @@ Color _getStatusColor(String status) {
       return Colors.green;
   }
 }
+
 
 Widget _buildStatusContainer(String value, String label) {
     return Container(

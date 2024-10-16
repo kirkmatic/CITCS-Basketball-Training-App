@@ -307,42 +307,157 @@ Future<void> _removeTask(String playerId, String taskId, String playerName) asyn
     }
   }
 
-  Widget _buildUsersTable() {
-    return isLoading
-        ? const Center(child: CircularProgressIndicator())
-        : DataTable(
-            columns: const [
-              DataColumn(label: Text('Name')),
-              DataColumn(label: Text('Student Number')),
-              DataColumn(label: Text('Actions')),
-            ],
-            rows: users.map((user) {
-              return DataRow(cells: [
-                DataCell(Text(user['name'])),
-                DataCell(Text(user['student_number'])),
-                DataCell(
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.task),
-                        onPressed: () {
-                          _assignTaskDialog(user['id']);
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.remove_red_eye),
-                        onPressed: () {
-                          _viewTasks(user['id'], user['name']);
-                        },
-                      ),
-                    ],
-                  ),
+Widget _buildUsersTable() {
+  return isLoading
+      ? const Center(child: CircularProgressIndicator())
+      : DataTable(
+          columns: const [
+            DataColumn(label: Text('Name')),
+            DataColumn(label: Text('Student Number')),
+            DataColumn(label: Text('Actions')),
+          ],
+          rows: users.map((user) {
+            return DataRow(cells: [
+              DataCell(Text(user['name'])),
+              DataCell(Text(user['student_number'])),
+              DataCell(
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.task),
+                      onPressed: () {
+                        _assignTaskDialog(user['id']);
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.remove_red_eye),
+                      onPressed: () {
+                        _viewTasks(user['id'], user['name']);
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.edit),
+                      onPressed: () {
+                        _viewStats(user['id'], user['name']);
+                      },
+                    ),
+                  ],
                 ),
-              ]);
-            }).toList(),
-          );
-  }
+              ),
+            ]);
+          }).toList(),
+        );
+}
+
+void _viewStats(String userId, String userName) {
+  // Initialize variables to hold the current stats values
+  int speed = 100;      // Default value
+  int strength = 100;   // Default value
+  int endurance = 100;  // Default value
+
+  // Fetch current stats from Firestore if needed
+  // You can call a method to fetch current stats here
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Edit Stats for $userName'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              decoration: InputDecoration(labelText: 'Speed'),
+              keyboardType: TextInputType.number,
+              onChanged: (value) {
+                speed = int.tryParse(value) ?? 100; // Ensure valid integer input
+              },
+            ),
+            TextField(
+              decoration: InputDecoration(labelText: 'Strength'),
+              keyboardType: TextInputType.number,
+              onChanged: (value) {
+                strength = int.tryParse(value) ?? 100;
+              },
+            ),
+            TextField(
+              decoration: InputDecoration(labelText: 'Endurance'),
+              keyboardType: TextInputType.number,
+              onChanged: (value) {
+                endurance = int.tryParse(value) ?? 100;
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              // Here you can implement the Firestore update logic
+              _updateStats(userId, speed, strength, endurance);
+              Navigator.of(context).pop(); // Close the dialog
+            },
+            child: const Text('Save'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the dialog
+            },
+            child: const Text('Cancel'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+void _updateStats(String userId, int speed, int strength, int endurance) {
+  // Reference to the user's stats document
+  DocumentReference statsDocRef = FirebaseFirestore.instance.collection('users').doc(userId).collection('stats').doc('statsId'); // Replace 'statsId' with your actual document ID or a unique ID.
+
+  statsDocRef.get().then((docSnapshot) {
+    if (docSnapshot.exists) {
+      // Document exists, update it
+      statsDocRef.update({
+        'speed': speed,
+        'strength': strength,
+        'endurance': endurance,
+      }).then((_) {
+        // Show a success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Stats updated successfully')),
+        );
+      }).catchError((error) {
+        // Handle errors during update
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update stats: $error')),
+        );
+      });
+    } else {
+      // Document does not exist, create it
+      statsDocRef.set({
+        'speed': speed,
+        'strength': strength,
+        'endurance': endurance,
+      }).then((_) {
+        // Show a success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Stats created successfully')),
+        );
+      }).catchError((error) {
+        // Handle errors during creation
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create stats: $error')),
+        );
+      });
+    }
+  }).catchError((error) {
+    // Handle errors during document fetch
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error fetching stats document: $error')),
+    );
+  });
+}
 
   Future<void> _assignTaskDialog(String playerId) async {
     final TextEditingController taskNameController = TextEditingController();
